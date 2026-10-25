@@ -54,6 +54,7 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
 let shown: Pose | null = null;
 let flight: { from: Pose; start: number } | null = null;
 let raf = 0;
+let lastKey = '';
 
 const onLanding = () => document.body.dataset.shot === 'home';
 
@@ -70,6 +71,10 @@ function apply(pose: Pose, docked: number, inScene: boolean) {
   const tile = document.querySelector<HTMLElement>('[data-brand-tile]');
   const mark = document.querySelector<HTMLElement>('[data-brand-mark]');
   if (!brand || !tile || !mark) return;
+  // only touch the DOM when something visibly changed
+  const key = [...KEYS.map((k) => Math.round(pose[k] * 10)), Math.round(docked * 100), inScene ? 1 : 0].join();
+  if (key === lastKey) return;
+  lastKey = key;
   const scale = pose.size / TILE;
   tile.style.transform =
     `translate(${pose.x - TILE / 2}px, ${pose.y - TILE / 2}px) rotate(${pose.angle}deg) scale(${scale})`;
@@ -117,6 +122,7 @@ export function initBrand() {
   document.addEventListener('astro:page-load', () => {
     // fly from the last pose on the previous page, if there was one
     if (shown && !reduced) flight = { from: shown, start: performance.now() };
+    lastKey = '';   // the nav is new on every page, so restyle it
     kick();
   });
   addEventListener('scroll', kick, { passive: true });

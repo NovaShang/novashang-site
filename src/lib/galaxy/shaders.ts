@@ -104,6 +104,7 @@ export const galaxyStarsVert = /* glsl */ `#version 300 es
 ${common}
 uniform vec3 uCamPos, uRight, uUp, uFwd;
 uniform float uTan, uAspect, uDpr, uSpin, uCount;
+uniform int uOccSteps;     // steps of the dust march toward the camera
 uniform vec2 uShift;
 out float vBright;
 out vec3 vColor;
@@ -155,9 +156,10 @@ void main() {
   float ty = abs(toCam.y) > 1e-4 ? (sign(toCam.y) * FIELD_H - g.y) / toCam.y : 1.0;   // where it leaves the slab
   float seg = clamp(ty, 0.0, 1.0) * length(toCam);
   vec3 dir = normalize(toCam);
-  float stepLen = min(seg, 1.2) / 7.0;
+  float stepLen = min(seg, 1.2) / float(uOccSteps);
   float od = 0.0;
-  for (int i = 0; i < 7; i++) {
+  for (int i = 0; i < 8; i++) {
+    if (i >= uOccSteps) break;
     vec3 q = g + dir * stepLen * (float(i) + 0.5);
     vec4 f = field(q);
     od += dustShape(q, f.a, f.r) * stepLen;

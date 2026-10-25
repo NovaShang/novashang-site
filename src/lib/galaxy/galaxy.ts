@@ -183,7 +183,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   const starVao = starField(gl, STAR_COUNT);
   const mobile = matchMedia('(pointer: coarse)').matches;
   const galaxyStars = compile(gl, galaxyStarsVert, starsFrag);
-  const GALAXY_STARS = mobile ? 200000 : 420000;
+  const GALAXY_STARS = mobile ? 130000 : 380000;
   const emptyVao = gl.createVertexArray();      // stars come from gl_VertexID
 
   // The tile floats just in front of the core (toward the home camera). It
@@ -255,10 +255,10 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.bindFramebuffer(g.FRAMEBUFFER, null);
   }
 
-  let scale = 0.5;   // volume pixels per CSS pixel; the stars carry the fine detail
-  let steps = mobile ? 160 : 220;
+  let scale = mobile ? 0.42 : 0.5;   // volume pixels per CSS pixel; the stars carry the fine detail
+  let steps = mobile ? 130 : 220;
   let vw = 0, vh = 0;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2);
 
   function resize() {
     const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
@@ -390,6 +390,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.uniform1f(galaxyStars.u.uDpr, dpr);
     g.uniform1f(galaxyStars.u.uSpin, spin);
     g.uniform1f(galaxyStars.u.uCount, GALAXY_STARS);
+    g.uniform1i(galaxyStars.u.uOccSteps, mobile ? 4 : 6);
     g.uniform2f(galaxyStars.u.uShift, sx, sy);
     g.bindVertexArray(emptyVao);
     g.drawArrays(g.POINTS, 0, GALAXY_STARS);
@@ -410,8 +411,8 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     tileU = norm(add(tileU ?? tu, add(tu, tileU ?? tu, -1), k));
     tileU = norm(add(tileU, tileR, -dot3(tileU, tileR)));     // keep it square
 
-    // about 65px on a desktop screen, 50px on a phone, at the home shot
-    const h = (aspect > 1.2 ? 0.1 : 0.16) / 2;
+    // about 105px on a desktop screen, 85px on a phone, at the home shot
+    const h = (aspect > 1.2 ? 0.16 : 0.28) / 2;
     const corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) =>
       add(add(TILE_POS, tileR!, a * h), tileU!, b * h));
 
@@ -494,7 +495,6 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   const onScroll = () => {
     const max = document.documentElement.scrollHeight - innerHeight;
     director.setScroll(max > 0 ? scrollY / max : 0);
-    settle = 30;
     kick();
   };
 
@@ -513,19 +513,32 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   const onVis = () => { if (!document.hidden) kick(); };
   document.addEventListener('visibilitychange', onVis);
 
-  let raf = 0, last = performance.now(), spin = 0, ready = false;
+  // Frame pacing. The background moves slowly, so it never needs the
+  // display's full rate; capping it leaves the GPU to the page itself
+  // (scrolling and system animations stay at 120 fps on phones).
+  const MOVE_FPS = mobile ? 30 : 60;     // while the camera is moving
+  const STILL_FPS = mobile ? 10 : 20;    // otherwise, just the slow spin
+  let raf = 0, lastRender = 0, spin = 0, ready = false;
   let slow = 0, fast = 0;
-  let settle = 30;        // frames left to converge after a change (reduced motion only animates this long)
-  let skip = false, skipped = false;
+  let settle = 20;        // frames to keep at full pace after a change (reduced motion stops after these)
+  let moving = true;
   let view: Pose = { azimuth: 0.35, elevation: 0.115, distance: 3, roll: -0.52, cx: 0, cy: 0 };
   function frame(now: number) {
     raf = 0;
     if (!visible || document.hidden) return;      // kick() restarts it
-    const dt = Math.min(0.1, (now - last) / 1000);
-    // a still camera only needs half the frames: the spin is very slow
-    if (skip && settle <= 0) { skip = false; skipped = true; raf = requestAnimationFrame(frame); return; }
-    last = now;
     if (baked < FL) { bakeLayers(mobile ? 3 : 4); raf = requestAnimationFrame(frame); return; }
+    const interval = 1000 / (moving ? MOVE_FPS : STILL_FPS);
+    if (lastRender && now - lastRender < interval - 2) { raf = requestAnimationFrame(frame); return; }
+
+    // adaptive quality: if frames keep arriving late at the moving pace, back off
+    if (lastRender && moving) {
+      const late = now - lastRender - interval;
+      if (late > 12) { slow++; fast = 0; } else if (late < 2) { fast++; slow = 0; }
+      if (slow > 12 && scale > 0.28) { scale -= 0.05; steps = Math.max(100, steps - 20); slow = 0; }
+      if (fast > 240 && scale < (mobile ? 0.5 : 0.7)) { scale += 0.03; fast = 0; }
+    }
+    const dt = lastRender ? Math.min(0.1, (now - lastRender) / 1000) : 1 / 60;
+    lastRender = now;
 
     spin += dt * 0.012;
     director.setAspect(canvas.clientWidth / Math.max(1, canvas.clientHeight));
@@ -533,7 +546,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     const out = director.update(reduced ? 10 : dt);
     view = out.view;
     // accumulate harder when the camera is still, less while it moves
-    const blend = Math.min(0.5, 0.08 + out.speed * 120);
+    const blend = Math.min(0.5, 0.08 + out.speed * 60);
     dtTile = dt;
     render(view, now / 1000, spin, blend);
     if (!ready) {
@@ -542,18 +555,15 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
       if (opts.intro && !reduced) director.intro();
     }
 
-    // adaptive quality: keep frames under ~20 ms (a skipped frame isn't a slow one)
-    if (skipped) { skipped = false; } else if (dt > 0.024) { slow++; fast = 0; } else if (dt < 0.012) { fast++; slow = 0; }
-    if (slow > 20 && scale > 0.3) { scale -= 0.06; steps = Math.max(120, steps - 20); slow = 0; }
-    if (fast > 120 && scale < 0.8) { scale += 0.04; fast = 0; }
-
-    skip = out.speed < 1e-4;
-    if (out.speed > 1e-4) settle = 30;
-    if (!reduced || settle-- > 0) raf = requestAnimationFrame(frame);
+    if (out.speed > 1e-4) settle = 20; else settle--;
+    moving = settle > 0;
+    if (!reduced || settle > 0) raf = requestAnimationFrame(frame);
   }
-  /** Start the loop if it isn't running. */
+  /** Start the loop if it isn't running, at the moving pace. */
   function kick() {
-    if (!raf && visible && !document.hidden) { last = performance.now(); raf = requestAnimationFrame(frame); }
+    settle = Math.max(settle, 20);
+    moving = true;
+    if (!raf && visible && !document.hidden) raf = requestAnimationFrame(frame);
   }
   onScroll();
 
