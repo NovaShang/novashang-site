@@ -474,9 +474,11 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   const onMouse = (e: PointerEvent) => {
     if (e.pointerType !== 'mouse') return;
     director.pointer((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1);
+    kick();
   };
 
   let gyro: { b: number; g: number } | null = null;
+  let lastTilt = { b: 0, g: 0 };
   const onOrient = (e: DeviceOrientationEvent) => {
     if (e.beta == null || e.gamma == null) return;
     if (!gyro) gyro = { b: e.beta, g: e.gamma };
@@ -484,6 +486,11 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     gyro.b += (e.beta - gyro.b) * 0.01;
     gyro.g += (e.gamma - gyro.g) * 0.01;
     director.pointer(clamp((e.gamma - gyro.g) / 24, -1, 1), clamp(-(e.beta - gyro.b) / 24, -1, 1));
+    // a phone held still still jitters a little; only real tilts need the faster pace
+    if (Math.abs(e.beta - lastTilt.b) + Math.abs(e.gamma - lastTilt.g) > 0.4) {
+      lastTilt = { b: e.beta, g: e.gamma };
+      kick();
+    }
   };
   // iOS asks for permission, and only from inside a user gesture
   const askGyro = () => {
@@ -517,8 +524,8 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   // Frame pacing. The background moves slowly, so it never needs the
   // display's full rate; capping it leaves the GPU to the page itself
   // (scrolling and system animations stay at 120 fps on phones).
-  const MOVE_FPS = mobile ? 30 : 60;     // while the camera is moving
-  const STILL_FPS = mobile ? 10 : 20;    // otherwise, just the slow spin
+  const MOVE_FPS = mobile ? 60 : 120;    // while the camera or parallax is moving
+  const STILL_FPS = 30;                  // otherwise, just the slow spin
   let raf = 0, lastRender = 0, spin = 0, ready = false;
   let slow = 0, fast = 0;
   let settle = 20;        // frames to keep at full pace after a change (reduced motion stops after these)
