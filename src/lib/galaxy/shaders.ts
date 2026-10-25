@@ -172,7 +172,7 @@ void main() {
   float bright = (0.32 + m * 3.6) * w * trans;
   if (v.z <= 0.0 || bright < 0.01) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
   vec2 ndc = vec2(v.x / (v.z * uTan * uAspect), v.y / (v.z * uTan)) + uShift;
-  gl_Position = vec4(ndc, 0.0, 1.0);
+  gl_Position = vec4(ndc, clamp(v.z / 20.0, 0.0, 1.0) * 2.0 - 1.0, 1.0);   // linear depth, so stars in front of the tile cover it
   // nearer stars are a little bigger, so flying in has depth
   float near = clamp(3.0 / v.z, 0.7, 2.6);
   vSize = (0.55 + m * 1.6) * uDpr * near;
@@ -349,7 +349,7 @@ void main() {
   vec3 v = vec3(dot(d, uRight), dot(d, uUp), dot(d, uFwd));
   vec2 ndc = vec2(v.x / (v.z * uTan * uAspect), v.y / (v.z * uTan)) + uShift;
   vUv = aUv;
-  gl_Position = vec4(ndc, 0.0, 1.0);
+  gl_Position = vec4(ndc, clamp(v.z / 20.0, 0.0, 1.0) * 2.0 - 1.0, 1.0);   // linear depth, so stars in front of the tile cover it
 }`;
 
 export const tileFrag = /* glsl */ `#version 300 es
@@ -357,17 +357,16 @@ precision highp float;
 in vec2 vUv;
 out vec4 outColor;
 uniform sampler2D uTex;
+uniform sampler2D uVol;    // the galaxy's glow, as already drawn on screen
+uniform vec2 uView;
 uniform float uShade;      // a touch darker as it turns away from the camera
 uniform float uAlpha;
-uniform float uSheen;      // where a soft reflection crosses the face, follows the tile's turn
 void main() {
   vec4 c = texture(uTex, vUv);
-  // glazed like a pool tile: light from above, and a faint broad highlight
-  // that slides across as the tile turns
-  float topLight = mix(1.04, 0.94, vUv.y);
-  float d = (vUv.x - (1.0 - vUv.y)) * 0.7071 - uSheen;
-  float sheen = exp(-d * d * 18.0) * 0.10;
-  vec3 rgb = c.rgb * uShade * topLight + vec3(sheen) * c.a;
+  if (c.a < 0.5) discard;    // the rounded corners mustn't hide the stars behind
+  // the tile sits inside the bulge's light: a little of that glow lies over it
+  vec3 glow = texture(uVol, gl_FragCoord.xy / uView).rgb;
+  vec3 rgb = c.rgb * uShade * 0.93 + glow * 0.16 * c.a;
   outColor = vec4(rgb, c.a) * uAlpha;
 }`;
 

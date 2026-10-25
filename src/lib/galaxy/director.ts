@@ -39,18 +39,18 @@ const REVEAL: Frame = { azimuth: 0.78, elevation: 0.36, distance: 2.7, roll: -0.
  *  away from the galaxy and off to the side, so the text sits in open space. */
 const HOME_PATH: Frame[] = [
   HOME,
-  { azimuth: 0.8, elevation: 0.4, distance: 3.9, roll: -0.45, wide: [-1.05, 0.25], tall: [-0.2, 1.05] },
-  { azimuth: 1.45, elevation: 0.9, distance: 4.6, roll: -0.3, wide: [-1.12, 0.0], tall: [-0.3, 1.12] },
-  { azimuth: 2.05, elevation: 1.3, distance: 5.0, roll: -0.15, wide: [-1.08, -0.2], tall: [-0.3, 1.1] },
+  { azimuth: 0.8, elevation: 0.4, distance: 3.9, roll: -0.45, wide: [-1.05, 0.25], tall: [-0.3, 1.35] },
+  { azimuth: 1.45, elevation: 0.9, distance: 4.6, roll: -0.3, wide: [-1.12, 0.0], tall: [-0.4, 1.45] },
+  { azimuth: 2.05, elevation: 1.3, distance: 5.0, roll: -0.15, wide: [-1.08, -0.2], tall: [-0.4, 1.45] },
 ];
 
 const PAGES: Record<Exclude<Shot, 'home'>, Frame> = {
   /** looking straight down on the disk, its core just off the left edge */
-  posts: { azimuth: 0.6, elevation: 1.5, distance: 4.4, roll: 0.35, wide: [-1.05, 0.1], tall: [0.0, 1.05] },
+  posts: { azimuth: 0.6, elevation: 1.5, distance: 4.4, roll: 0.35, wide: [-1.05, 0.1], tall: [0.0, 1.4] },
   /** edge-on from the far side: a thin bright line low across the page */
-  projects: { azimuth: 2.9, elevation: 0.035, distance: 3.9, roll: -0.08, wide: [-0.1, -0.7], tall: [0.0, -0.78] },
+  projects: { azimuth: 2.9, elevation: 0.035, distance: 3.9, roll: -0.08, wide: [-0.1, -0.7], tall: [0.0, -0.95] },
   /** far away and small, so long reading stays calm */
-  post: { azimuth: 4.0, elevation: 0.62, distance: 6.4, roll: -0.3, wide: [0.68, 0.45], tall: [0.75, 0.85] },
+  post: { azimuth: 4.0, elevation: 0.62, distance: 6.4, roll: -0.3, wide: [0.68, 0.45], tall: [0.9, 1.15] },
 };
 
 const KEYS = ['azimuth', 'elevation', 'distance', 'roll', 'cx', 'cy'] as const;

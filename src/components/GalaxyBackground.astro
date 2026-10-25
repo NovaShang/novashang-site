@@ -21,7 +21,10 @@
   let failed = false;
 
   // how much the page dims the galaxy so text on top stays easy to read
-  const DIM: Record<Shot, number> = { home: 0, posts: 0.3, projects: 0.25, post: 0.5 };
+  // Phones get more: the text runs the full width, right over the stars.
+  const DIM: Record<Shot, number> = { home: 0.4, posts: 0.3, projects: 0.25, post: 0.5 };
+  const DIM_PHONE: Record<Shot, number> = { home: 0.68, posts: 0.62, projects: 0.58, post: 0.78 };
+  const phone = matchMedia('(max-width: 767px)');
 
   const shotOfPage = () => (document.body.dataset.shot as Shot | undefined) ?? 'post';
 
@@ -31,7 +34,7 @@
     const shot = shotOfPage();
     // on the landing page the galaxy dims a little once you're past the intro
     const s = shot === 'home' ? Math.min(1, Math.max(0, (scrollY / innerHeight - 0.3) / 0.6)) : 1;
-    el.style.opacity = String(shot === 'home' ? s * 0.4 : DIM[shot]);
+    el.style.opacity = String((phone.matches ? DIM_PHONE : DIM)[shot] * s);
   }
 
   function onPage() {

@@ -123,13 +123,6 @@ function tileTexture(gl: WebGL2RenderingContext) {
     'M5.06732 11.0215L0 16.0485L5.06732 21.0773V19.4429L1.6474 16.0485L5.06732 12.6555V11.0215Z',
     'M24.5682 11.055V12.6903L27.9526 16.0503L24.5682 19.409V21.0439L29.6 16.0485L24.5682 11.055Z',
   ]) g.fill(new Path2D(d));
-  // a hairline glaze at the rim
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  g.strokeStyle = 'rgba(255, 255, 255, 0.22)';
-  g.lineWidth = 3;
-  g.beginPath();
-  g.roundRect(pad + 1.5, pad + 1.5, N - 2 * pad - 3, N - 2 * pad - 3, (N - 2 * pad) * (14 / 104) - 1.5);
-  g.stroke();
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -167,7 +160,7 @@ function cameraBasis(view: Pose) {
 }
 
 export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {}) {
-  const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, powerPreference: 'high-performance' });
+  const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: true, premultipliedAlpha: false, powerPreference: 'high-performance' });
   if (!gl) return null;
 
   const tri = gl.createVertexArray();
@@ -210,7 +203,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   gl.bindVertexArray(null);
   const TILE_TILT = (10 * Math.PI) / 180;   // top edge rising to the right
   const homeDir = norm([Math.cos(0.115) * Math.sin(0.35), Math.sin(0.115), Math.cos(0.115) * Math.cos(0.35)]);
-  const TILE_POS = homeDir.map((v) => v * 0.2);
+  const TILE_POS = homeDir.map((v) => v * 0.7);   // in front of most of the bulge; a few disk stars still pass over it
   let tileR: V3 | null = null, tileU: V3 | null = null;
   let tileAlpha = 0;
 
@@ -368,8 +361,15 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.bindVertexArray(tri);
     g.drawArrays(g.TRIANGLES, 0, 3);
 
-    // the galaxy's own stars on top, each already dimmed by the dust in front of it
+    // the tile writes depth so only the stars in front of it cover it
+    g.clear(g.DEPTH_BUFFER_BIT);
+    g.enable(g.DEPTH_TEST);
+    g.depthFunc(g.LESS);
+    drawTile(cam, aspect, fovTan, sx, sy, dtTile, next.tex);
     g.blendFunc(g.ONE, g.ONE);
+
+    // the galaxy's own stars on top, each already dimmed by the dust in front of it
+    g.depthMask(false);
     g.useProgram(galaxyStars.prog);
     g.activeTexture(g.TEXTURE0);
     g.bindTexture(g.TEXTURE_3D, noise);
@@ -390,13 +390,13 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.uniform2f(galaxyStars.u.uShift, sx, sy);
     g.bindVertexArray(emptyVao);
     g.drawArrays(g.POINTS, 0, GALAXY_STARS);
-
-    drawTile(cam, aspect, fovTan, sx, sy, dtTile);
+    g.depthMask(true);
+    g.disable(g.DEPTH_TEST);
     g.disable(g.BLEND);
   }
 
   let dtTile = 0;
-  function drawTile(cam: ReturnType<typeof cameraBasis>, aspect: number, fovTan: number, sx: number, sy: number, dt: number) {
+  function drawTile(cam: ReturnType<typeof cameraBasis>, aspect: number, fovTan: number, sx: number, sy: number, dt: number, vol: WebGLTexture) {
     const g = gl!;
     // target orientation: facing the camera, rolled by the tilt
     const c = Math.cos(TILE_TILT), s = Math.sin(TILE_TILT);
@@ -440,6 +440,11 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.activeTexture(g.TEXTURE0);
     g.bindTexture(g.TEXTURE_2D, tileTex);
     g.uniform1i(tileProg.u.uTex, 0);
+    g.activeTexture(g.TEXTURE1);
+    g.bindTexture(g.TEXTURE_2D, vol);
+    g.uniform1i(tileProg.u.uVol, 1);
+    g.activeTexture(g.TEXTURE0);
+    g.uniform2f(tileProg.u.uView, canvas.width, canvas.height);
     g.uniform3fv(tileProg.u.uCamPos, cam.pos);
     g.uniform3fv(tileProg.u.uRight, cam.right);
     g.uniform3fv(tileProg.u.uUp, cam.up);
@@ -450,8 +455,6 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     const facing = Math.abs(dot3(norm([tileR![1] * tileU![2] - tileR![2] * tileU![1], tileR![2] * tileU![0] - tileR![0] * tileU![2], tileR![0] * tileU![1] - tileR![1] * tileU![0]]), cam.fwd));
     g.uniform1f(tileProg.u.uShade, 0.8 + 0.2 * facing);
     g.uniform1f(tileProg.u.uAlpha, tileAlpha);
-    // the sheen tracks how far the tile is turned from the camera
-    g.uniform1f(tileProg.u.uSheen, -0.25 + dot3(tileR!, cam.fwd) * 3.0 + dot3(tileU!, cam.fwd) * 2.0);
     g.bindVertexArray(tileVao);
     g.drawArrays(g.TRIANGLE_STRIP, 0, 4);
   }
