@@ -3,10 +3,6 @@
 // can fly from one page's shot to the next (see src/lib/galaxy/director.ts).
 ---
 <div class="galaxy-bg" transition:persist="galaxy-bg" aria-hidden="true">
-  <picture class="galaxy-fallback">
-    <source srcset="/background.webp" type="image/webp" />
-    <img src="/background.jpeg" alt="" fetchpriority="high" />
-  </picture>
   <canvas data-galaxy></canvas>
   <div class="galaxy-dim" data-galaxy-dim></div>
 </div>
@@ -58,7 +54,7 @@
     } catch (e) {
       failed = true;
       brandTarget.pending = false;
-      console.warn('galaxy disabled', e);   // keep the static wallpaper
+      console.warn('galaxy disabled', e);   // the plain dark background stays
     }
   }
 
@@ -74,14 +70,11 @@
     background: #070d12;
     pointer-events: none;
   }
-  .galaxy-fallback img,
   .galaxy-bg canvas {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    object-position: 60% 50%;
   }
   .galaxy-bg canvas { opacity: 0; transition: opacity 900ms ease; }
   .galaxy-bg canvas:global(.is-ready) { opacity: 1; }
