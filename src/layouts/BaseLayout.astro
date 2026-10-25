@@ -3,6 +3,7 @@ import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
+import BrandLogo from '../components/BrandLogo.astro';
 import { getLangFromUrl, useTranslations } from '../i18n/utils';
 
 interface Props {
@@ -61,6 +62,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://novashang.c
   </head>
   <body class="min-h-screen flex flex-col bg-bg font-sans">
     <Navbar />
+    <BrandLogo />
     <main class="flex-1">
       <slot />
     </main>
