@@ -343,13 +343,15 @@ in vec2 aUv;
 uniform vec3 uCamPos, uRight, uUp, uFwd;
 uniform float uTan, uAspect;
 uniform vec2 uShift;
+uniform float uDepthBias;
 out vec2 vUv;
 void main() {
   vec3 d = aPos - uCamPos;
   vec3 v = vec3(dot(d, uRight), dot(d, uUp), dot(d, uFwd));
   vec2 ndc = vec2(v.x / (v.z * uTan * uAspect), v.y / (v.z * uTan)) + uShift;
   vUv = aUv;
-  gl_Position = vec4(ndc, clamp(v.z / 20.0, 0.0, 1.0) * 2.0 - 1.0, 1.0);   // linear depth, so stars in front of the tile cover it
+  // linear depth, pulled toward the camera so only stars well in front cover it
+  gl_Position = vec4(ndc, clamp((v.z - uDepthBias) / 20.0, 0.0, 1.0) * 2.0 - 1.0, 1.0);
 }`;
 
 export const tileFrag = /* glsl */ `#version 300 es

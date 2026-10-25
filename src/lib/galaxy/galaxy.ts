@@ -202,8 +202,11 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 12);
   gl.bindVertexArray(null);
   const TILE_TILT = (10 * Math.PI) / 180;   // top edge rising to the right
-  const homeDir = norm([Math.cos(0.115) * Math.sin(0.35), Math.sin(0.115), Math.cos(0.115) * Math.cos(0.35)]);
-  const TILE_POS = homeDir.map((v) => v * 0.7);   // in front of most of the bulge; a few disk stars still pass over it
+  // Pinned to the core so camera moves and parallax never slide it onto an arm.
+  // For hiding stars it counts as this far in front, so the bulge stays
+  // behind it and only a few disk stars pass over.
+  const TILE_POS = [0, 0, 0];
+  const TILE_DEPTH_BIAS = 0.7;
   let tileR: V3 | null = null, tileU: V3 | null = null;
   let tileAlpha = 0;
 
@@ -452,6 +455,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.uniform1f(tileProg.u.uTan, fovTan);
     g.uniform1f(tileProg.u.uAspect, aspect);
     g.uniform2f(tileProg.u.uShift, sx, sy);
+    g.uniform1f(tileProg.u.uDepthBias, TILE_DEPTH_BIAS);
     const facing = Math.abs(dot3(norm([tileR![1] * tileU![2] - tileR![2] * tileU![1], tileR![2] * tileU![0] - tileR![0] * tileU![2], tileR![0] * tileU![1] - tileR![1] * tileU![0]]), cam.fwd));
     g.uniform1f(tileProg.u.uShade, 0.8 + 0.2 * facing);
     g.uniform1f(tileProg.u.uAlpha, tileAlpha);
@@ -477,7 +481,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     // drift the neutral pose toward how the phone is held now
     gyro.b += (e.beta - gyro.b) * 0.01;
     gyro.g += (e.gamma - gyro.g) * 0.01;
-    director.pointer(clamp((e.gamma - gyro.g) / 14, -2, 2), clamp(-(e.beta - gyro.b) / 14, -2, 2));
+    director.pointer(clamp((e.gamma - gyro.g) / 24, -1, 1), clamp(-(e.beta - gyro.b) / 24, -1, 1));
   };
   // iOS asks for permission, and only from inside a user gesture
   const askGyro = () => {
