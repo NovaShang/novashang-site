@@ -31,6 +31,8 @@ export const ui = {
 
     'home.section.posts': '文章',
     'home.section.projects': '项目',
+    'home.galaxy.hint': '实时渲染 · 轻点靠近',
+    'home.galaxy.back': '轻点返回',
     'home.posts.all': '全部文章',
     'home.projects.all': '全部 {n} 个项目',
 
@@ -68,6 +70,8 @@ export const ui = {
 
     'home.section.posts': 'Writing',
     'home.section.projects': 'Projects',
+    'home.galaxy.hint': 'Rendered live · tap to look closer',
+    'home.galaxy.back': 'Tap to go back',
     'home.posts.all': 'All writing',
     'home.projects.all': 'All {n} projects',
 

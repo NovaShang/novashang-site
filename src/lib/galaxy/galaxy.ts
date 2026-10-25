@@ -1,3 +1,4 @@
+import { Director, SHOTS, type Mode, type Pose } from './director';
 import { accumFrag, bakeFrag, blitFrag, fullscreenVert, galaxyStarsVert, skyFrag, starsFrag, starsVert, volumeFrag } from './shaders';
 
 export interface GalaxyOptions {
@@ -7,18 +8,15 @@ export interface GalaxyOptions {
   frameWidth?: (aspect: number) => number;
   /** Called once the first frame is on screen. */
   onReady?: () => void;
+  /** Called when the camera switches between home, explore and the idle tour. */
+  onMode?: (mode: Mode) => void;
+  /** Play the intro move once the first frame is up. */
+  intro?: boolean;
 }
 
-export interface GalaxyView {
-  /** Orbit around the disk normal, radians. */
-  azimuth: number;
-  /** Camera height above the disk plane, radians. */
-  elevation: number;
-}
-
-const BASE: GalaxyView = { azimuth: 0.35, elevation: 0.115 };
-const ROLL = -0.52;          // tilts the major axis from lower-left to upper-right
-const DIST = 3.0;
+// The field of view is fixed from the home shot's distance, so moving the
+// camera closer really is a dolly rather than a zoom.
+const DIST = SHOTS.home.distance;
 const FOV_TAN = Math.tan((28 * Math.PI) / 180 / 2);
 
 function compile(gl: WebGL2RenderingContext, vs: string, fs: string) {
@@ -105,9 +103,9 @@ function starField(gl: WebGL2RenderingContext, count: number) {
   return vao;
 }
 
-function cameraBasis(view: GalaxyView) {
-  const { azimuth: az, elevation: el } = view;
-  const pos = [DIST * Math.cos(el) * Math.sin(az), DIST * Math.sin(el), DIST * Math.cos(el) * Math.cos(az)];
+function cameraBasis(view: Pose) {
+  const { azimuth: az, elevation: el, distance: D } = view;
+  const pos = [D * Math.cos(el) * Math.sin(az), D * Math.sin(el), D * Math.cos(el) * Math.cos(az)];
   const len = Math.hypot(pos[0], pos[1], pos[2]);
   const fwd = pos.map((v) => -v / len);
   // right = fwd × worldUp, up = right × fwd
@@ -119,7 +117,7 @@ function cameraBasis(view: GalaxyView) {
     right[2] * fwd[0] - right[0] * fwd[2],
     right[0] * fwd[1] - right[1] * fwd[0],
   ];
-  const c = Math.cos(ROLL), s = Math.sin(ROLL);
+  const c = Math.cos(view.roll), s = Math.sin(view.roll);
   const r2 = right.map((v, i) => c * v + s * up[i]);
   up = up.map((v, i) => -s * right[i] + c * v);
   return { pos, fwd, right: r2, up };
@@ -222,7 +220,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   }
 
   let frameNo = 0;
-  function render(view: GalaxyView, time: number, spin: number, blend: number) {
+  function render(view: Pose, time: number, spin: number, blend: number) {
     resize();
     const aspect = canvas.width / canvas.height;
     const [sx, sy] = opts.center?.(aspect) ?? [0, 0];
@@ -333,44 +331,44 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
 
   // ---------- interaction ----------
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const target = { ...BASE };
-  const view = { ...BASE };
-  const clampView = () => {
-    target.azimuth = Math.max(BASE.azimuth - 0.6, Math.min(BASE.azimuth + 0.6, target.azimuth));
-    target.elevation = Math.max(0.05, Math.min(0.36, target.elevation));
-  };
+  const director = new Director(opts.onMode);
+  const host = canvas.parentElement ?? canvas;
 
   const onMouse = (e: PointerEvent) => {
     if (e.pointerType !== 'mouse') return;
-    const nx = (e.clientX / innerWidth) * 2 - 1;
-    const ny = (e.clientY / innerHeight) * 2 - 1;
-    target.azimuth = BASE.azimuth + nx * 0.28;
-    target.elevation = BASE.elevation - ny * 0.08;
+    director.pointer((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1);
   };
 
-  let drag: { x: number; y: number; az: number; el: number } | null = null;
+  // drags orbit the camera; a short press without movement is a tap
+  let press: { x: number; y: number; lx: number; ly: number; t: number; moved: boolean } | null = null;
   const onDown = (e: PointerEvent) => {
-    if (e.pointerType === 'mouse') return;
-    drag = { x: e.clientX, y: e.clientY, az: target.azimuth, el: target.elevation };
+    if ((e.target as Element).closest('a, button')) return;
+    press = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), moved: false };
   };
   const onMove = (e: PointerEvent) => {
-    if (!drag || e.pointerType === 'mouse') return;
-    target.azimuth = drag.az + (e.clientX - drag.x) * 0.006;
-    target.elevation = drag.el - (e.clientY - drag.y) * 0.003;
-    clampView();
+    if (!press) return;
+    if (!press.moved && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) {
+      press.moved = true;
+      director.dragStart();
+    }
+    if (press.moved) director.dragBy(e.clientX - press.lx, e.clientY - press.ly);
+    press.lx = e.clientX;
+    press.ly = e.clientY;
   };
-  const onUp = () => { drag = null; };
+  const onUp = () => {
+    if (press && !press.moved && performance.now() - press.t < 500) director.tap();
+    if (press?.moved) director.dragEnd();
+    press = null;
+  };
 
   let gyro: { b: number; g: number } | null = null;
   const onOrient = (e: DeviceOrientationEvent) => {
-    if (e.beta == null || e.gamma == null || drag) return;
+    if (e.beta == null || e.gamma == null || press?.moved) return;
     if (!gyro) gyro = { b: e.beta, g: e.gamma };
     // drift the neutral pose toward how the phone is held now
     gyro.b += (e.beta - gyro.b) * 0.01;
     gyro.g += (e.gamma - gyro.g) * 0.01;
-    target.azimuth = BASE.azimuth + ((e.gamma - gyro.g) * Math.PI) / 180 * 1.2;
-    target.elevation = BASE.elevation + ((e.beta - gyro.b) * Math.PI) / 180 * 0.6;
-    clampView();
+    director.pointer(clamp((e.gamma - gyro.g) / 14, -2, 2), clamp(-(e.beta - gyro.b) / 14, -2, 2));
   };
   // iOS asks for permission, and only from inside a user gesture
   const askGyro = () => {
@@ -380,7 +378,12 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     }
   };
 
-  const host = canvas.parentElement ?? canvas;
+  // leaving the hero tilts the galaxy toward face-on
+  const onScroll = () => {
+    const r = canvas.getBoundingClientRect();
+    director.setScroll(-r.top / Math.max(1, r.height));
+  };
+
   if (!reduced) {
     addEventListener('pointermove', onMouse, { passive: true });
     host.addEventListener('pointerdown', onDown, { passive: true });
@@ -388,7 +391,9 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     addEventListener('pointerup', onUp, { passive: true });
     addEventListener('pointercancel', onUp, { passive: true });
     addEventListener('deviceorientation', onOrient, { passive: true });
+    addEventListener('scroll', onScroll, { passive: true });
     host.addEventListener('touchend', askGyro, { once: true });
+    onScroll();
   }
 
   // ---------- loop ----------
@@ -400,21 +405,24 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
 
   let raf = 0, last = performance.now(), spin = 0, ready = false;
   let slow = 0, fast = 0;
+  let view: Pose = { ...SHOTS.home };
   function frame(now: number) {
     raf = 0;
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
-    const k = 1 - Math.exp(-dt * 2.5);
-    view.azimuth += (target.azimuth - view.azimuth) * k;
-    view.elevation += (target.elevation - view.elevation) * k;
-    spin += dt * 0.012;
-    const drift = reduced ? 0 : Math.sin(now / 1000 * 0.07) * 0.05;
-    // accumulate harder when the camera is still, less while it moves
-    const speed = Math.abs(target.azimuth - view.azimuth) + Math.abs(target.elevation - view.elevation);
-    const blend = Math.min(0.35, 0.08 + speed * 3);
     if (baked < FL) { bakeLayers(mobile ? 3 : 4); kick(); return; }
-    render({ azimuth: view.azimuth + drift, elevation: view.elevation }, now / 1000, spin, blend);
-    if (!ready) { ready = true; opts.onReady?.(); }
+
+    spin += dt * 0.012;
+    const out = director.update(reduced ? 0 : dt);
+    view = out.view;
+    // accumulate harder when the camera is still, less while it moves
+    const blend = Math.min(0.5, 0.08 + out.speed * 120);
+    render(view, now / 1000, spin, blend);
+    if (!ready) {
+      ready = true;
+      opts.onReady?.();
+      if (opts.intro && !reduced) director.intro();
+    }
 
     // adaptive quality: keep frames under ~20 ms
     if (dt > 0.024) { slow++; fast = 0; } else if (dt < 0.012) { fast++; slow = 0; }
@@ -439,9 +447,11 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
       removeEventListener('pointerup', onUp);
       removeEventListener('pointercancel', onUp);
       removeEventListener('deviceorientation', onOrient);
+      removeEventListener('scroll', onScroll);
       host.removeEventListener('touchend', askGyro);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     },
+    director,
     /** GPU cost of one frame in ms at the current quality (for tuning). */
     bench(n = 20) {
       const t0 = performance.now();
@@ -450,7 +460,9 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
       gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
       return { ms: (performance.now() - t0) / n, scale, steps, w: vw, h: vh };
     },
-    /** For screenshots and tuning. */
-    setView(v: Partial<GalaxyView>) { Object.assign(target, v); Object.assign(view, v); },
+    /** Jump to a named shot (for screenshots and tuning). */
+    jump(name: keyof typeof SHOTS) { director.jump(SHOTS[name]); },
   };
 }
+
+function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }

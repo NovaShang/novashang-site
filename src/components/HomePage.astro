@@ -38,7 +38,11 @@ const links = [
     </picture>
     <canvas data-galaxy class="galaxy-canvas absolute inset-0 w-full h-full" aria-hidden="true"></canvas>
     <div class="hero-shade absolute inset-0 pointer-events-none"></div>
-    <div class="relative w-full max-w-[1120px] mx-auto px-5 md:px-8 pt-16 pb-56 md:py-24">
+    <p class="galaxy-hint absolute right-5 md:right-8 bottom-4 md:bottom-6 text-[12px] text-white/45 pointer-events-none select-none" aria-hidden="true">
+      <span data-hint="home">{t('home.galaxy.hint')}</span>
+      <span data-hint="explore">{t('home.galaxy.back')}</span>
+    </p>
+    <div class="hero-copy relative w-full max-w-[1120px] mx-auto px-5 md:px-8 pt-16 pb-56 md:py-24">
       <div data-brand-slot class="w-[72px] h-[72px] md:w-[88px] md:h-[88px] mb-8 md:mb-10" aria-hidden="true"></div>
       <h1 class="text-[40px] md:text-[56px] leading-[1.1] font-bold tracking-tight text-white">{t('home.hero.name')}</h1>
       <p class="mt-4 md:mt-5 text-[18px] md:text-[21px] leading-snug text-white/90 max-w-[640px]">{t('home.hero.role')}</p>
@@ -88,13 +92,18 @@ const links = [
   let galaxy: ReturnType<typeof mountGalaxy> = null;
   function start() {
     const canvas = document.querySelector<HTMLCanvasElement>('[data-galaxy]');
-    if (!canvas) return;
+    const host = document.querySelector<HTMLElement>('[data-galaxy-host]');
+    if (!canvas || !host) return;
     try {
       galaxy = mountGalaxy(canvas, {
         // desktop: core right of the text; phones: core in the lower right
         center: (aspect) => (aspect > 1.2 ? [0.32, 0.02] : [0.3, -0.42]),
         onReady: () => canvas.classList.add('is-ready'),
+        onMode: (mode) => { host.dataset.mode = mode; },
+        // the reveal plays once per visit
+        intro: !sessionStorage.getItem('galaxy-intro'),
       });
+      sessionStorage.setItem('galaxy-intro', '1');
       (window as unknown as { galaxy?: unknown }).galaxy = galaxy;
     } catch (e) {
       console.warn('galaxy disabled', e);   // keep the static wallpaper
@@ -108,6 +117,16 @@ const links = [
   .hero { background: #070d12; touch-action: pan-y; }
   .galaxy-canvas { opacity: 0; transition: opacity 900ms ease; }
   .galaxy-canvas:global(.is-ready) { opacity: 1; }
+  /* the hint only appears once the render is live */
+  .galaxy-hint { opacity: 0; transition: opacity 600ms ease; }
+  .galaxy-canvas:global(.is-ready) ~ .galaxy-hint { opacity: 1; }
+  .galaxy-hint [data-hint='explore'], .hero[data-mode='explore'] .galaxy-hint [data-hint='home'] { display: none; }
+  .hero[data-mode='explore'] .galaxy-hint [data-hint='explore'] { display: inline; }
+  .hero:has(.galaxy-canvas:global(.is-ready)) { cursor: zoom-in; }
+  .hero[data-mode='explore'] { cursor: zoom-out; }
+  /* up close, the intro text steps aside */
+  .hero-copy { transition: opacity 900ms ease; }
+  .hero[data-mode='explore'] .hero-copy { opacity: 0; pointer-events: none; }
   .hero-shade {
     background:
       linear-gradient(90deg, rgba(7, 13, 18, 0.72) 0%, rgba(7, 13, 18, 0.35) 45%, rgba(7, 13, 18, 0) 75%);

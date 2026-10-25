@@ -63,7 +63,7 @@ mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 // Two logarithmic spiral arms; 1 on an arm, 0 between arms.
 float arms(float th, float r, float offset) {
-  return 0.5 + 0.5 * cos(2.0 * (th + log(r + 0.04) * 3.4 + offset));
+  return 0.5 + 0.5 * cos(2.0 * (th + log(r + 0.04) * 2.0 + offset));
 }
 
 // Extent of the baked field in galaxy space.
@@ -129,6 +129,13 @@ void main() {
   } else {
     float rr = -0.34 * log((rnd(id, 1u) + 1e-7) * (rnd(id, 2u) + 1e-7));
     float th = 6.2831853 * rnd(id, 3u);
+    if (rnd(id, 12u) < 0.78) {
+      // most disk stars sit along one of the two arms (the crest of arms()),
+      // including the same large-scale warp, with some scatter
+      float th0 = floor(rnd(id, 13u) * 2.0) * 3.14159265 - log(rr + 0.04) * 2.0;
+      float warp = (fbm3(vec3(rr * cos(th0), 0.0, rr * sin(th0)) * 1.3 + 3.1) - 0.44) * 2.2;
+      th = th0 - warp + gauss(id, 14u) * 0.22;
+    }
     float hh = gauss(id, 4u) * (0.008 + 0.022 * smoothstep(0.2, 1.1, rr));
     g = vec3(rr * cos(th), hh, rr * sin(th));
   }
@@ -138,7 +145,7 @@ void main() {
   float a = arms(atan(g.z, g.x), r, (big - 0.44) * 2.2);
   float clump = fbm3(g * 7.0 + 7.0);
   float m = pow(rnd(id, 10u), 7.0);                    // a few bright stars, many faint ones
-  float w = isBulge ? 1.0 : mix(0.12, 1.0, a * a) * (0.25 + 1.8 * clump * clump);
+  float w = isBulge ? 1.0 : mix(0.3, 1.0, a * a) * (0.25 + 1.8 * clump * clump) * 1.2;
   w *= 1.0 - smoothstep(1.0, 1.5, r);
 
   // dust between the star and the camera, in galaxy space
@@ -166,9 +173,11 @@ void main() {
   if (v.z <= 0.0 || bright < 0.01) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
   vec2 ndc = vec2(v.x / (v.z * uTan * uAspect), v.y / (v.z * uTan)) + uShift;
   gl_Position = vec4(ndc, 0.0, 1.0);
-  vSize = (0.55 + m * 1.6) * uDpr;
+  // nearer stars are a little bigger, so flying in has depth
+  float near = clamp(3.0 / v.z, 0.7, 2.6);
+  vSize = (0.55 + m * 1.6) * uDpr * near;
   gl_PointSize = vSize * 3.0;
-  vBright = bright;
+  vBright = bright / pow(near, 1.4);       // bigger, not brighter, so close-ups don't blow out
   vec3 warm = vec3(1.0, 0.86, 0.62), white = vec3(0.95, 0.96, 1.0), blue = vec3(0.66, 0.79, 1.0);
   vColor = isBulge ? mix(warm, white, rnd(id, 11u) * 0.4)
                    : mix(mix(warm, white, smoothstep(0.05, 0.25, r)), blue, smoothstep(0.25, 0.7, r) * (0.6 + 0.4 * rnd(id, 11u)));
@@ -240,7 +249,7 @@ vec3 emissionAt(vec3 p, float big, float clump) {
   // stellar disk: thin and blue-white, brightest along the arms
   float diskH = 0.010 + 0.022 * smoothstep(0.2, 1.1, r);
   float disk = exp(-r / 0.42) * exp(-abs(h) / diskH);
-  disk *= mix(0.4, 1.0, a * a) * (0.4 + 1.2 * clump * clump);
+  disk *= mix(0.15, 1.0, a * a) * (0.4 + 1.2 * clump * clump);
   disk *= (1.0 - smoothstep(0.95, 1.5, r)) * mix(0.25, 1.0, smoothstep(0.06, 0.4, r));
 
   // bulge: hot core, cream bulge, and a soft glow rising off the plane
