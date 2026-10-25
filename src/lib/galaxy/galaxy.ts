@@ -183,7 +183,8 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   const starVao = starField(gl, STAR_COUNT);
   const mobile = matchMedia('(pointer: coarse)').matches;
   const galaxyStars = compile(gl, galaxyStarsVert, starsFrag);
-  const GALAXY_STARS = mobile ? 130000 : 380000;
+  // A few visible stars; the dense glow between them comes from the volume pass.
+  const GALAXY_STARS = mobile ? 26000 : 48000;
   const emptyVao = gl.createVertexArray();      // stars come from gl_VertexID
 
   // The tile floats just in front of the core (toward the home camera). It

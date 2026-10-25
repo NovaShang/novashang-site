@@ -171,7 +171,7 @@ void main() {
   pw.xz = rot(-uSpin) * pw.xz;
   vec3 d = pw - uCamPos;
   vec3 v = vec3(dot(d, uRight), dot(d, uUp), dot(d, uFwd));
-  float bright = (0.32 + m * 3.6) * w * trans;
+  float bright = (0.55 + m * 4.0) * w * trans;
   if (v.z <= 0.0 || bright < 0.01) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
   vec2 ndc = vec2(v.x / (v.z * uTan * uAspect), v.y / (v.z * uTan)) + uShift;
   gl_Position = vec4(ndc, clamp(v.z / 20.0, 0.0, 1.0) * 2.0 - 1.0, 1.0);   // linear depth, so stars in front of the tile cover it
@@ -257,7 +257,7 @@ vec3 emissionAt(vec3 p, float big, float clump) {
   // bulge: hot core, cream bulge, and a soft glow rising off the plane
   float rb = length(vec3(p.x, h / 0.78, p.z));
   float core = exp(-rb / 0.045) * 3.0;
-  float bulge = exp(-rb / 0.16) * 2.2;
+  float bulge = exp(-rb / 0.16) * 2.8;
   // the big cream glow sits mostly on the far side of the lane, as in the wallpaper
   float glow = exp(-length(vec3(p.x, h / 0.34, p.z)) / 0.37) * 0.55 * mix(0.3, 1.0, smoothstep(-0.12, 0.1, h));
   float halo = exp(-length(vec3(p.x, h / 0.35, p.z)) / 0.9) * 0.09;
@@ -267,7 +267,7 @@ vec3 emissionAt(vec3 p, float big, float clump) {
   vec3 blue = vec3(0.56, 0.73, 1.0);
   vec3 diskCol = mix(cream, blue, smoothstep(0.08, 0.35, r));
   return core * warm + bulge * mix(warm, cream, 0.5) + glow * mix(warm, cream, 0.45)
-       + disk * diskCol * (2.6 + 3.4 * smoothstep(0.25, 0.8, r)) + halo * vec3(0.32, 0.52, 0.95);
+       + disk * diskCol * (4.2 + 4.6 * smoothstep(0.25, 0.8, r)) + halo * vec3(0.32, 0.52, 0.95);
 }
 
 // interleaved gradient noise: even, static dither for the ray start
