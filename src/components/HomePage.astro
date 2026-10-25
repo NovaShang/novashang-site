@@ -1,8 +1,9 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PostCard from './PostCard.astro';
-import ProjectCard from './ProjectCard.astro';
+import PostRow from './PostRow.astro';
+import ProjectRow from './ProjectRow.astro';
+import Section from './Section.astro';
 import { contact } from '../i18n/ui';
 import { localizedPath, useTranslations, type Lang } from '../i18n/utils';
 
@@ -15,7 +16,6 @@ const t = useTranslations(lang);
 const posts = (await getCollection('posts', ({ data }) => data.lang === lang && !data.draft))
   .sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime())
   .slice(0, 3);
-const [latest, ...older] = posts;
 
 const allProjects = await getCollection('projects', ({ data }) => data.lang === lang);
 const featured = allProjects
@@ -29,58 +29,46 @@ const links = [
 ];
 ---
 <BaseLayout shot="home">
-  {/* The intro sits straight on the galaxy background */}
-  <section class="hero relative md:min-h-[600px] md:flex md:items-center">
-    <div class="hero-shade absolute inset-0 pointer-events-none"></div>
-    <div class="relative w-full max-w-[1120px] mx-auto px-5 md:px-8 pt-24 pb-72 md:py-24">
-      <h1 class="text-[40px] md:text-[56px] leading-[1.1] font-bold tracking-tight text-white">{t('home.hero.name')}</h1>
-      <p class="mt-4 md:mt-5 text-[18px] md:text-[21px] leading-snug text-white/90 max-w-[640px]">{t('home.hero.role')}</p>
-      <p class="mt-4 text-[15px] md:text-[16px] leading-[1.75] text-white/65 max-w-[600px]">{t('home.hero.bio')}</p>
-      <div class="mt-7 md:mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-white/75">
-        {links.map((l) => (
-          <a href={l.href} target={l.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"
-             class="border-b border-white/25 pb-0.5 hover:text-white hover:border-accent transition-colors">{l.label}</a>
-        ))}
+  {/* The first screen is the scene itself: the galaxy, the tile at its core,
+      and a small caption like the label beside a work on a gallery wall. */}
+  <section class="relative h-[100svh] min-h-[560px]">
+    <div class="absolute inset-x-0 bottom-0">
+      <div class="caption max-w-[1120px] mx-auto px-5 md:px-8 pb-9 md:pb-12">
+        <h1 class="text-[22px] md:text-[24px] font-semibold tracking-tight text-white">
+          {t('home.hero.name')}<span class="ml-3 font-normal text-white/45">{t('home.hero.alt')}</span>
+        </h1>
+        <p class="mt-1.5 text-[14px] md:text-[15px] text-white/65">{t('home.hero.role')}</p>
       </div>
     </div>
   </section>
 
-  <div class="max-w-[1120px] mx-auto px-5 md:px-8">
-    {latest && (
-      <section class="pt-14 md:pt-20">
-        <div class="flex items-baseline justify-between mb-6">
-          <h2 class="section-title">{t('home.section.posts')}</h2>
-          <a href={localizedPath('/posts', lang)} class="text-sm text-muted hover:text-fg transition-colors">{t('home.posts.all')} →</a>
+  <div class="pt-24 md:pt-32 space-y-24 md:space-y-32">
+    <Section label={t('home.section.about')}>
+      <p class="md:pt-5 text-[19px] md:text-[23px] leading-[1.65] text-fg-2 max-w-[720px]">{t('home.hero.bio')}</p>
+      <div class="mt-7 flex flex-wrap gap-x-7 gap-y-2 text-[14px] text-muted">
+        {links.map((l) => (
+          <a href={l.href} target={l.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"
+             class="hover:text-fg transition-colors">{l.label}</a>
+        ))}
+      </div>
+    </Section>
+
+    {posts.length > 0 && (
+      <Section label={t('home.section.posts')} more={{ href: localizedPath('/posts', lang), text: t('home.posts.all') }}>
+        <div class="divide-y divide-line border-b border-line">
+          {posts.map((post) => <PostRow post={post} lang={lang} />)}
         </div>
-        <PostCard post={latest} lang={lang} feature />
-        {older.length > 0 && (
-          <div class="mt-4 grid gap-4 md:grid-cols-2">
-            {older.map((post) => <PostCard post={post} lang={lang} />)}
-          </div>
-        )}
-      </section>
+      </Section>
     )}
 
-    <section class="pt-14 md:pt-20">
-      <div class="flex items-baseline justify-between mb-6">
-        <h2 class="section-title">{t('home.section.projects')}</h2>
-        <a href={localizedPath('/projects', lang)} class="text-sm text-muted hover:text-fg transition-colors">
-          {t('home.projects.all').replace('{n}', String(allProjects.length))} →
-        </a>
+    <Section label={t('home.section.projects')} more={{ href: localizedPath('/projects', lang), text: t('home.projects.all').replace('{n}', String(allProjects.length)) }}>
+      <div class="divide-y divide-line border-b border-line">
+        {featured.map((project) => <ProjectRow project={project} />)}
       </div>
-      <div class="grid gap-4 md:grid-cols-2">
-        {featured.map((project) => <ProjectCard project={project} />)}
-      </div>
-    </section>
+    </Section>
   </div>
 </BaseLayout>
 
 <style>
-  /* keeps the intro text readable where the galaxy is bright */
-  .hero-shade {
-    background: linear-gradient(90deg, rgba(7, 13, 18, 0.7) 0%, rgba(7, 13, 18, 0.3) 45%, rgba(7, 13, 18, 0) 75%);
-  }
-  @media (max-width: 767px) {
-    .hero-shade { background: linear-gradient(180deg, rgba(7, 13, 18, 0.6) 0%, rgba(7, 13, 18, 0.3) 55%, rgba(7, 13, 18, 0) 75%); }
-  }
+  .caption { text-shadow: 0 1px 14px rgba(7, 13, 18, 0.7); }
 </style>

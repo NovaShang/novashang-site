@@ -1,7 +1,8 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PostCard from './PostCard.astro';
+import PostRow from './PostRow.astro';
+import Section from './Section.astro';
 import { useTranslations, type Lang } from '../i18n/utils';
 
 interface Props {
@@ -14,15 +15,15 @@ const posts = (await getCollection('posts', ({ data }) => data.lang === lang && 
   .sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime());
 ---
 <BaseLayout title={t('posts.title')} shot="posts">
-  <section class="max-w-[1120px] mx-auto px-5 md:px-8 pt-14 md:pt-20">
-    <h1 class="text-[32px] md:text-[40px] font-bold tracking-tight text-fg">{t('posts.title')}</h1>
-    <p class="mt-3 text-[16px] text-fg-2">{t('posts.subtitle')}</p>
-    {posts.length === 0 ? (
-      <p class="mt-10 text-muted">{t('posts.empty')}</p>
-    ) : (
-      <div class="mt-10 grid gap-4">
-        {posts.map((post) => <PostCard post={post} lang={lang} feature={!!post.data.heroImage} />)}
-      </div>
-    )}
-  </section>
+  <div class="pt-16 md:pt-24">
+    <Section label={t('posts.title')} note={t('posts.subtitle')} title>
+      {posts.length === 0 ? (
+        <p class="pt-6 text-muted">{t('posts.empty')}</p>
+      ) : (
+        <div class="divide-y divide-line border-b border-line">
+          {posts.map((post) => <PostRow post={post} lang={lang} />)}
+        </div>
+      )}
+    </Section>
+  </div>
 </BaseLayout>

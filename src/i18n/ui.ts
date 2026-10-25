@@ -28,10 +28,12 @@ export const ui = {
     'home.hero.role': 'Foundational Industries 仿真与数字孪生工程师，在 Palo Alto。',
     'home.hero.bio': '此前在上海建工做了九年 BIM 和数字孪生。业余时间做 AI 工具，让它读懂、绘制、修改建筑模型和工程图纸；也做一些自己每天要用的小工具。',
 
+    'home.hero.alt': 'Shang Gao',
+    'home.section.about': '关于',
     'home.section.posts': '文章',
     'home.section.projects': '项目',
     'home.posts.all': '全部文章',
-    'home.projects.all': '全部 {n} 个项目',
+    'home.projects.all': '全部 {n} 个',
 
     'projects.title': '项目',
     'projects.subtitle': '做过的、还在做的东西。都链到项目自己的网站或代码仓库。',
@@ -64,6 +66,8 @@ export const ui = {
     'home.hero.role': 'Emulation & Digital Twin Engineer at Foundational Industries, Palo Alto.',
     'home.hero.bio': 'Before this I spent nine years on BIM and digital twins at Shanghai Construction Group. In my own time I build AI tools that read, draw and edit building models and engineering diagrams, and the occasional small utility for my own desk.',
 
+    'home.hero.alt': '高尚',
+    'home.section.about': 'About',
     'home.section.posts': 'Writing',
     'home.section.projects': 'Projects',
     'home.posts.all': 'All writing',

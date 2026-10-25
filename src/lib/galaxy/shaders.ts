@@ -359,9 +359,16 @@ out vec4 outColor;
 uniform sampler2D uTex;
 uniform float uShade;      // a touch darker as it turns away from the camera
 uniform float uAlpha;
+uniform float uSheen;      // where a soft reflection crosses the face, follows the tile's turn
 void main() {
   vec4 c = texture(uTex, vUv);
-  outColor = vec4(c.rgb * uShade, c.a) * uAlpha;
+  // glazed like a pool tile: light from above, and a faint broad highlight
+  // that slides across as the tile turns
+  float topLight = mix(1.04, 0.94, vUv.y);
+  float d = (vUv.x - (1.0 - vUv.y)) * 0.7071 - uSheen;
+  float sheen = exp(-d * d * 18.0) * 0.10;
+  vec3 rgb = c.rgb * uShade * topLight + vec3(sheen) * c.a;
+  outColor = vec4(rgb, c.a) * uAlpha;
 }`;
 
 export const accumFrag = /* glsl */ `#version 300 es

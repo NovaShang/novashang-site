@@ -26,7 +26,7 @@ interface Pose {
 
 const TILE = 104;          // base size of the tile element
 const MARK_W = 30, MARK_H = 32;
-const DOCK_SCROLL = 200;   // px of scrolling that takes the tile from the scene to the nav
+const DOCK_SCROLL = 0.5;   // fraction of the screen height scrolled while the tile rises from the scene to the nav
 const FLIGHT_MS = 900;
 
 function cornerPose(): Pose {
@@ -41,7 +41,7 @@ function cornerPose(): Pose {
 function scenePose(t: ScreenTile): Pose {
   // a quarter turn more than it looks, so the square spins as it docks
   // but looks the same at both ends; the mark is 46% of the tile, as in the avatar
-  return { x: t.x, y: t.y, size: t.size, angle: t.angle - 90, radius: 0, mx: t.x, my: t.y, mscale: (t.size * 0.46) / MARK_H };
+  return { x: t.x, y: t.y, size: t.size, angle: t.angle - 90, radius: 14, mx: t.x, my: t.y, mscale: (t.size * 0.46) / MARK_H };
 }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -61,7 +61,7 @@ function targetPose(): { pose: Pose; docked: number } {
   const corner = cornerPose();
   const scene = onLanding() ? brandTarget.scene : null;
   if (!scene) return { pose: corner, docked: 1 };
-  const p = smooth(Math.min(1, Math.max(0, window.scrollY / DOCK_SCROLL)));
+  const p = smooth(Math.min(1, Math.max(0, window.scrollY / (innerHeight * DOCK_SCROLL))));
   return { pose: mix(scenePose(scene), corner, p), docked: p };
 }
 
@@ -80,7 +80,8 @@ function apply(pose: Pose, docked: number, inScene: boolean) {
   brand.classList.toggle('in-scene', inScene);
   brandTarget.docked = !inScene;
   brand.classList.add('is-placed');
-  // the nav title takes over from the big name as the tile docks
+  // the bar and the nav title fill in as the tile docks
+  document.querySelector<HTMLElement>('[data-nav]')?.style.setProperty('--nav-solid', String(onLanding() ? docked : 1));
   const title = document.querySelector<HTMLElement>('[data-nav-title]');
   if (title) title.style.opacity = String(smooth(Math.min(1, Math.max(0, (docked - 0.55) / 0.45))));
 }

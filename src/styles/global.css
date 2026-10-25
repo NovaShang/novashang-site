@@ -51,35 +51,12 @@ html[lang='zh-CN'] body { letter-spacing: 0.01em; }
 
 .tnum { font-variant-numeric: tabular-nums; }
 
-/* Small accent bar in front of section titles, from the 2023 site */
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--c-fg);
-}
-.section-title::before {
-  content: '';
-  width: 4px;
-  height: 18px;
-  border-radius: 2px;
-  background: #e74dae;
-}
-
 .panel {
   background: var(--c-surface);
   border: 1px solid var(--c-line);
   border-radius: 10px;
   transition: border-color 150ms ease, background-color 150ms ease;
 }
-a.panel:hover {
-  border-color: rgba(231, 77, 174, 0.45);
-  background: var(--c-surface-hover);
-}
-a.panel:hover .panel-title { color: #e74dae; }
 
 .prose-nova {
   --tw-prose-body: var(--c-fg-2);
@@ -87,7 +64,7 @@ a.panel:hover .panel-title { color: #e74dae; }
   --tw-prose-links: var(--c-fg);
   --tw-prose-bold: var(--c-fg);
   --tw-prose-quotes: var(--c-fg-2);
-  --tw-prose-quote-borders: #e74dae;
+  --tw-prose-quote-borders: rgba(255, 255, 255, 0.2);
   --tw-prose-code: var(--c-fg);
   --tw-prose-bullets: var(--c-muted);
   --tw-prose-counters: var(--c-muted);
@@ -102,11 +79,11 @@ a.panel:hover .panel-title { color: #e74dae; }
 .prose-nova > h1:first-child { display: none; }
 .prose-nova a {
   text-decoration: underline;
-  text-decoration-color: rgba(231, 77, 174, 0.5);
+  text-decoration-color: rgba(255, 255, 255, 0.3);
   text-underline-offset: 4px;
   transition: color 150ms ease;
 }
-.prose-nova a:hover { color: #e74dae; }
+.prose-nova a:hover { color: #fff; text-decoration-color: rgba(255, 255, 255, 0.7); }
 .prose-nova h2, .prose-nova h3 { letter-spacing: -0.01em; font-weight: 600; }
 .prose-nova h2 { margin-top: 2.2em; }
 .prose-nova code {

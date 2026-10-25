@@ -21,7 +21,7 @@
   let failed = false;
 
   // how much the page dims the galaxy so text on top stays easy to read
-  const DIM: Record<Shot, number> = { home: 0, posts: 0.35, projects: 0.3, post: 0.55 };
+  const DIM: Record<Shot, number> = { home: 0, posts: 0.3, projects: 0.25, post: 0.5 };
 
   const shotOfPage = () => (document.body.dataset.shot as Shot | undefined) ?? 'post';
 
@@ -30,8 +30,8 @@
     if (!el) return;
     const shot = shotOfPage();
     // on the landing page the galaxy dims a little once you're past the intro
-    const s = shot === 'home' ? Math.min(1, Math.max(0, (scrollY / innerHeight - 0.25) / 0.6)) : 1;
-    el.style.opacity = String(shot === 'home' ? s * 0.35 : DIM[shot]);
+    const s = shot === 'home' ? Math.min(1, Math.max(0, (scrollY / innerHeight - 0.3) / 0.6)) : 1;
+    el.style.opacity = String(shot === 'home' ? s * 0.4 : DIM[shot]);
   }
 
   function onPage() {

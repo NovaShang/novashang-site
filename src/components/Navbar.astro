@@ -16,8 +16,10 @@ const isActive = (match: string) => path.startsWith(`/${lang}/${match}`);
 const targetLang = lang === 'zh' ? 'en' : 'zh';
 const switchUrl = switchLangPath(path, lang, targetLang);
 ---
-<header class="fixed top-0 inset-x-0 z-50 h-13 md:h-14 bg-nav text-fg" style="box-shadow: var(--c-nav-shadow)">
-  <div class="h-full flex items-center justify-between pl-[72px] md:pl-[92px] pr-3 md:pr-6">
+<header data-nav class="fixed top-0 inset-x-0 z-50 h-13 md:h-14 text-fg">
+  {/* the 2024 bar; on the landing page it only fills in once the tile docks */}
+  <div class="nav-bg absolute inset-0 bg-nav" style="box-shadow: var(--c-nav-shadow); opacity: var(--nav-solid, 1)"></div>
+  <div class="relative h-full flex items-center justify-between pl-[72px] md:pl-[92px] pr-3 md:pr-6">
     <a href={localizedPath('/', lang)} data-nav-title class="text-[16px] md:text-[17px] font-semibold text-fg tracking-tight">
       {t('home.hero.name')}
     </a>
@@ -32,7 +34,7 @@ const switchUrl = switchLangPath(path, lang, targetLang);
           ]}
           aria-current={isActive(link.match) ? 'page' : undefined}
         >
-          <span class:list={['pb-1', isActive(link.match) && 'border-b-2 border-accent']}>{link.label}</span>
+          <span class:list={['pb-1', isActive(link.match) && 'border-b border-white/60']}>{link.label}</span>
         </a>
       ))}
       <span class="w-px h-4 bg-line mx-1 md:mx-2"></span>
@@ -47,4 +49,10 @@ const switchUrl = switchLangPath(path, lang, targetLang);
     </nav>
   </div>
 </header>
-<div class="h-13 md:h-14" aria-hidden="true"></div>
+<div class="nav-spacer h-13 md:h-14" aria-hidden="true"></div>
+
+<style is:global>
+  body[data-shot='home'] [data-nav] { --nav-solid: 0; }
+  /* the landing page's first screen runs under the bar */
+  body[data-shot='home'] .nav-spacer { display: none; }
+</style>
