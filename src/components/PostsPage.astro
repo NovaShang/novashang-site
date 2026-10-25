@@ -1,0 +1,28 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostCard from './PostCard.astro';
+import { useTranslations, type Lang } from '../i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const posts = (await getCollection('posts', ({ data }) => data.lang === lang && !data.draft))
+  .sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime());
+---
+<BaseLayout title={t('posts.title')}>
+  <section class="max-w-[1120px] mx-auto px-5 md:px-8 pt-14 md:pt-20">
+    <h1 class="text-[32px] md:text-[40px] font-bold tracking-tight text-fg">{t('posts.title')}</h1>
+    <p class="mt-3 text-[16px] text-fg-2">{t('posts.subtitle')}</p>
+    {posts.length === 0 ? (
+      <p class="mt-10 text-muted">{t('posts.empty')}</p>
+    ) : (
+      <div class="mt-10 grid gap-4">
+        {posts.map((post) => <PostCard post={post} lang={lang} feature={!!post.data.heroImage} />)}
+      </div>
+    )}
+  </section>
+</BaseLayout>

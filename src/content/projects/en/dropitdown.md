@@ -5,6 +5,7 @@ url: https://dropitdown.novashang.com
 repo: https://github.com/NovaShang/dropitdown
 tags: ["macOS", "LLM", "Tool"]
 lang: en
+group: tools
 featured: false
 order: 7
 ---

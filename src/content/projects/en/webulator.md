@@ -5,6 +5,7 @@ url: https://novashang.github.io/webulator/
 repo: https://github.com/NovaShang/webulator
 tags: ["Emulation", "Web"]
 lang: en
+group: fun
 featured: false
 order: 8
 ---

@@ -4,6 +4,7 @@ description: "An AI agent for BIM. It queries, analyzes, and edits building mode
 url: https://bim-claw.com
 tags: ["AI Agent", "BIM"]
 lang: en
+group: building
 featured: true
 order: 1
 ---

@@ -5,6 +5,7 @@ url: https://bentoai.dev/term
 repo: https://github.com/NovaShang/BentoTerm
 tags: ["macOS", "iOS", "tmux"]
 lang: en
+group: tools
 featured: true
 order: 4
 ---

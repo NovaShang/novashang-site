@@ -5,6 +5,7 @@ url: https://novashang.github.io/palo-ally/
 repo: https://github.com/NovaShang/palo-ally
 tags: ["AI Agent", "Claude Code"]
 lang: en
+group: tools
 featured: true
 order: 3
 ---

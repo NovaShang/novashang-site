@@ -3,7 +3,7 @@ import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
-import { getLangFromUrl, isHomePath, useTranslations } from '../i18n/utils';
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
 
 interface Props {
   title?: string;
@@ -18,10 +18,9 @@ const { title, description, noFooter = false } = Astro.props;
 const fullTitle = title ? `${title} · ${t('site.title')}` : t('site.title');
 const meta = description ?? t('site.description');
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://novashang.com').toString();
-const onHome = isHomePath(Astro.url.pathname, lang);
 ---
 <!doctype html>
-<html lang={lang === 'zh' ? 'zh-CN' : 'en'} class="scroll-smooth">
+<html lang={lang === 'zh' ? 'zh-CN' : 'en'} class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -37,16 +36,16 @@ const onHome = isHomePath(Astro.url.pathname, lang);
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="alternate" hreflang="zh-CN" href={new URL(`/zh${Astro.url.pathname.replace(/^\/(zh|en)/, '')}`, Astro.site ?? 'https://novashang.com').toString()} />
     <link rel="alternate" hreflang="en" href={new URL(`/en${Astro.url.pathname.replace(/^\/(zh|en)/, '')}`, Astro.site ?? 'https://novashang.com').toString()} />
-    <meta name="theme-color" content="#070d12" />
+    <meta name="theme-color" content="#1a2c3f" />
 
-    {/* No-flash theme init — runs before first paint, also re-applies after view transitions */}
+    {/* No-flash theme init. Dark unless the visitor picked light (or system, and the system is light). */}
     <script is:inline>
       (function () {
         function apply() {
           try {
-            var stored = localStorage.getItem('theme');
+            var stored = localStorage.getItem('theme') || 'dark';
             var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var isDark = stored === 'dark' || ((!stored || stored === 'system') && prefersDark);
+            var isDark = stored === 'dark' || (stored === 'system' && prefersDark);
             document.documentElement.classList.toggle('dark', isDark);
           } catch (e) {}
         }
@@ -58,56 +57,13 @@ const onHome = isHomePath(Astro.url.pathname, lang);
     <ClientRouter />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
-  <body class="min-h-screen flex flex-col font-sans selection:bg-neon-pink selection:text-white">
-    {/* Solid base */}
-    <div class="fixed inset-0 -z-50 bg-void-black"></div>
-
-    {/* Atmospheric background — fades / blurs on scroll on home */}
-    <div transition:name="global-bg" transition:persist class="fixed inset-0 -z-40 h-full w-full overflow-hidden pointer-events-none">
-      <picture class="bg-photo">
-        <source srcset="/background.webp" type="image/webp" />
-        <img id="bg-image" src="/background.jpeg" alt="" decoding="async" loading="eager" fetchpriority="high" class="w-full h-full object-cover transition-[filter,opacity] duration-300 ease-out scale-105" />
-      </picture>
-      <div id="bg-overlay" class="absolute inset-0 bg-void-black transition-opacity duration-300"></div>
-    </div>
-
+  <body class="min-h-screen flex flex-col bg-bg font-sans">
     <Navbar />
     <main class="flex-1">
       <slot />
     </main>
     {!noFooter && <Footer />}
-
-    <script>
-      document.addEventListener('astro:page-load', () => {
-        const bgImage = document.getElementById('bg-image') as HTMLImageElement | null;
-        const bgOverlay = document.getElementById('bg-overlay');
-        if (!bgImage || !bgOverlay) return;
-
-        const update = () => {
-          const path = window.location.pathname;
-          const isHome =
-            path === '/zh' || path === '/zh/' || path === '/en' || path === '/en/';
-          if (isHome) {
-            const ratio = Math.min(window.scrollY / (window.innerHeight * 0.7), 1);
-            bgImage.style.filter = `blur(${ratio * 30}px)`;
-            (bgOverlay as HTMLElement).style.opacity = (ratio * 0.85).toString();
-          } else {
-            bgImage.style.filter = 'blur(30px)';
-            (bgOverlay as HTMLElement).style.opacity = '0.85';
-          }
-        };
-
-        const onScroll = () => requestAnimationFrame(update);
-        window.addEventListener('scroll', onScroll, { passive: true });
-        document.addEventListener(
-          'astro:before-swap',
-          () => window.removeEventListener('scroll', onScroll),
-          { once: true },
-        );
-        update();
-      });
-    </script>
   </body>
 </html>

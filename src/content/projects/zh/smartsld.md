@@ -5,6 +5,7 @@ url: https://smartsld.com
 repo: https://github.com/NovaShang/sldeditor
 tags: ["AI", "SVG", "Cloudflare"]
 lang: zh
+group: building
 featured: true
 order: 2
 ---

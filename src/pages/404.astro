@@ -5,16 +5,11 @@ import { getLangFromUrl, useTranslations, localizedPath } from '../i18n/utils';
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 ---
-<BaseLayout title={t('404.title')} noFooter>
-  <section class="min-h-[80vh] flex flex-col items-center justify-center px-4 text-center relative z-10 animate-in">
-    <h1 class="text-7xl md:text-9xl font-extrabold tracking-tighter text-neon-pink drop-shadow-[0_0_30px_rgba(231,77,174,0.5)] mb-6">404</h1>
-    <h2 class="text-2xl md:text-3xl font-bold text-text-white mb-4">{t('404.title')}</h2>
-    <p class="text-text-muted mb-10 max-w-md">{t('404.body')}</p>
-    <a
-      href={localizedPath('/', lang)}
-      class="bg-neon-pink hover:bg-neon-pink/90 text-white font-bold px-6 py-3 rounded-full transition-all hover:shadow-[0_0_20px_rgba(231,77,174,0.5)]"
-    >
-      {t('404.cta')}
-    </a>
+<BaseLayout title={t('404.title')}>
+  <section class="max-w-[1120px] mx-auto px-5 md:px-8 pt-24 md:pt-32">
+    <p class="text-sm text-muted tnum">404</p>
+    <h1 class="mt-3 text-[32px] md:text-[40px] font-bold tracking-tight text-fg">{t('404.title')}</h1>
+    <p class="mt-3 text-fg-2">{t('404.body')}</p>
+    <a href={localizedPath('/', lang)} class="inline-block mt-8 text-fg border-b border-accent pb-0.5 hover:text-accent transition-colors">{t('404.cta')} →</a>
   </section>
 </BaseLayout>

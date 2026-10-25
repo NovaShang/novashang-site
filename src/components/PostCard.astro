@@ -1,39 +1,33 @@
 ---
 import type { CollectionEntry } from 'astro:content';
+import { formatDate, type Lang } from '../i18n/utils';
 
 interface Props {
   post: CollectionEntry<'posts'>;
-  lang: 'zh' | 'en';
+  lang: Lang;
+  /** Wide card with the hero image beside the text. */
+  feature?: boolean;
 }
-const { post, lang } = Astro.props;
-const { title, description, pubDate, tags } = post.data;
-const cleanSlug = post.id.split('/').pop();
-const dateLocale = lang === 'zh' ? 'zh-CN' : 'en-US';
-const category = tags[0] ?? (lang === 'zh' ? '随笔' : 'NOTE');
+const { post, lang, feature = false } = Astro.props;
+const { title, description, pubDate, heroImage, tags } = post.data;
+const href = `/${lang}/posts/${post.id.split('/').pop()}`;
+const meta = [formatDate(pubDate, lang), ...tags.slice(1)].join(' · ');
 ---
-<a href={`/${lang}/posts/${cleanSlug}`} class="group block h-full">
-  <article class="bg-midnight-panel rounded-xl overflow-hidden shadow-sm dark:shadow-lg hover:shadow-neon-pink/20 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col border border-[var(--c-line)]">
-    <div class="h-40 overflow-hidden relative bg-void-black/50">
-      <div class="absolute inset-0 flex items-center justify-center">
-        {/* Decorative gradient block as image-fallback */}
-        <div class="w-full h-full" style="background: radial-gradient(circle at 30% 30%, rgba(231,77,174,0.22), transparent 60%), linear-gradient(135deg, var(--c-panel) 0%, var(--c-bg) 100%);"></div>
-      </div>
-      <div class="absolute top-4 left-4 z-10">
-        <span class="bg-neon-pink/90 text-white text-xs font-bold px-2 py-1 rounded shadow-md backdrop-blur-sm uppercase tracking-wider">
-          {category}
-        </span>
-      </div>
+{feature && heroImage ? (
+  <a href={href} class="panel group grid grid-cols-1 md:grid-cols-[1.15fr_1fr] overflow-hidden">
+    <div class="aspect-[16/9] md:aspect-auto md:min-h-[300px] bg-bg overflow-hidden border-b md:border-b-0 md:border-r border-line">
+      <img src={heroImage} alt="" loading="lazy" class="w-full h-full object-cover" />
     </div>
-    <div class="p-6 flex flex-col flex-grow">
-      <div class="flex items-center text-xs text-text-muted mb-3 gap-2">
-        <time datetime={pubDate.toISOString()}>
-          {pubDate.toLocaleDateString(dateLocale, { year: 'numeric', month: 'short', day: 'numeric' })}
-        </time>
-      </div>
-      <h3 class="text-xl font-bold mb-2 text-text-white group-hover:text-neon-pink transition-colors line-clamp-2">{title}</h3>
-      {description && (
-        <p class="text-text-grey text-sm line-clamp-3 mb-4 flex-grow">{description}</p>
-      )}
+    <div class="p-6 md:p-8 flex flex-col">
+      <p class="text-[13px] text-muted tnum">{meta}</p>
+      <h3 class="panel-title mt-3 text-[20px] md:text-[24px] leading-snug font-semibold text-fg tracking-tight transition-colors">{title}</h3>
+      {description && <p class="mt-3 text-[15px] leading-relaxed text-fg-2">{description}</p>}
     </div>
-  </article>
-</a>
+  </a>
+) : (
+  <a href={href} class="panel group block p-6">
+    <p class="text-[13px] text-muted tnum">{meta}</p>
+    <h3 class="panel-title mt-2.5 text-[17px] leading-snug font-semibold text-fg transition-colors">{title}</h3>
+    {description && <p class="mt-2 text-[14.5px] leading-relaxed text-fg-2 line-clamp-3">{description}</p>}
+  </a>
+)}

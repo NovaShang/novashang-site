@@ -29,3 +29,17 @@ export function switchLangPath(currentPath: string, currentLang: Lang, targetLan
 export function isHomePath(pathname: string, lang: Lang): boolean {
   return pathname === `/${lang}` || pathname === `/${lang}/`;
 }
+
+export function formatDate(d: Date, lang: Lang): string {
+  return lang === 'zh'
+    ? `${d.getUTCFullYear()} 年 ${d.getUTCMonth() + 1} 月 ${d.getUTCDate()} 日`
+    : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+/** "https://www.bim-claw.com/x" -> "bim-claw.com/x", for showing where a link goes. */
+export function displayUrl(url: string): string {
+  const u = new URL(url);
+  const host = u.host.replace(/^www\./, '');
+  if (host === 'github.com') return `github.com${u.pathname.replace(/\/$/, '')}`;
+  return host + u.pathname.replace(/\/$/, '');
+}

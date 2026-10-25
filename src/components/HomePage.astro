@@ -1,0 +1,99 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostCard from './PostCard.astro';
+import ProjectCard from './ProjectCard.astro';
+import { contact } from '../i18n/ui';
+import { localizedPath, useTranslations, type Lang } from '../i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const posts = (await getCollection('posts', ({ data }) => data.lang === lang && !data.draft))
+  .sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime())
+  .slice(0, 3);
+const [latest, ...older] = posts;
+
+const allProjects = await getCollection('projects', ({ data }) => data.lang === lang);
+const featured = allProjects
+  .filter((p) => p.data.featured)
+  .sort((a, b) => a.data.order - b.data.order);
+
+const links = [
+  { href: contact.github, label: 'GitHub' },
+  { href: contact.linkedin, label: 'LinkedIn' },
+  { href: `mailto:${contact.email}`, label: contact.email },
+];
+---
+<BaseLayout>
+  {/* Intro over the Mountain Lion galaxy wallpaper */}
+  <section class="hero relative overflow-hidden">
+    <picture>
+      <source srcset="/background.webp" type="image/webp" />
+      <img src="/background.jpeg" alt="" fetchpriority="high" class="absolute inset-0 w-full h-full object-cover object-[60%_50%]" />
+    </picture>
+    <div class="hero-shade absolute inset-0"></div>
+    <div class="relative max-w-[1120px] mx-auto px-5 md:px-8 pt-20 pb-16 md:pt-32 md:pb-24">
+      <h1 class="text-[40px] md:text-[56px] leading-[1.1] font-bold tracking-tight text-white">{t('home.hero.name')}</h1>
+      <p class="mt-4 md:mt-5 text-[18px] md:text-[21px] leading-snug text-white/90 max-w-[640px]">{t('home.hero.role')}</p>
+      <p class="mt-4 text-[15px] md:text-[16px] leading-[1.75] text-white/65 max-w-[600px]">{t('home.hero.bio')}</p>
+      <div class="mt-7 md:mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-white/75">
+        {links.map((l) => (
+          <a href={l.href} target={l.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"
+             class="border-b border-white/25 pb-0.5 hover:text-white hover:border-accent transition-colors">{l.label}</a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <div class="max-w-[1120px] mx-auto px-5 md:px-8">
+    {latest && (
+      <section class="pt-14 md:pt-20">
+        <div class="flex items-baseline justify-between mb-6">
+          <h2 class="section-title">{t('home.section.posts')}</h2>
+          <a href={localizedPath('/posts', lang)} class="text-sm text-muted hover:text-fg transition-colors">{t('home.posts.all')} →</a>
+        </div>
+        <PostCard post={latest} lang={lang} feature />
+        {older.length > 0 && (
+          <div class="mt-4 grid gap-4 md:grid-cols-2">
+            {older.map((post) => <PostCard post={post} lang={lang} />)}
+          </div>
+        )}
+      </section>
+    )}
+
+    <section class="pt-14 md:pt-20">
+      <div class="flex items-baseline justify-between mb-6">
+        <h2 class="section-title">{t('home.section.projects')}</h2>
+        <a href={localizedPath('/projects', lang)} class="text-sm text-muted hover:text-fg transition-colors">
+          {t('home.projects.all').replace('{n}', String(allProjects.length))} →
+        </a>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        {featured.map((project) => <ProjectCard project={project} />)}
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .hero { background: #070d12; }
+  .hero-shade {
+    background:
+      linear-gradient(90deg, rgba(7, 13, 18, 0.82) 0%, rgba(7, 13, 18, 0.55) 45%, rgba(7, 13, 18, 0.25) 100%);
+  }
+  :global(html.dark) .hero-shade {
+    background:
+      linear-gradient(180deg, rgba(7, 13, 18, 0) 70%, #070d12 100%),
+      linear-gradient(90deg, rgba(7, 13, 18, 0.82) 0%, rgba(7, 13, 18, 0.55) 45%, rgba(7, 13, 18, 0.25) 100%);
+  }
+  @media (max-width: 767px) {
+    .hero-shade { background: rgba(7, 13, 18, 0.6); }
+    :global(html.dark) .hero-shade {
+      background: linear-gradient(180deg, rgba(7, 13, 18, 0.55) 0%, rgba(7, 13, 18, 0.6) 75%, #070d12 100%);
+    }
+  }
+</style>

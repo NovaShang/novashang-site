@@ -8,7 +8,7 @@ const t = useTranslations(lang);
   <a
     data-auth-signin
     href="#"
-    class="text-xs font-bold text-text-muted hover:text-neon-pink transition-colors uppercase tracking-widest"
+    class="text-sm text-muted hover:text-fg transition-colors"
   >
     {t('auth.signin')}
   </a>
@@ -17,21 +17,21 @@ const t = useTranslations(lang);
     <button
       type="button"
       data-auth-user-trigger
-      class="inline-flex items-center gap-2 rounded-full border border-[var(--c-line-strong)] bg-[var(--c-tint)] px-2 py-1 text-xs font-semibold text-text-white hover:border-neon-pink/50 transition-colors"
+      class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-1 py-1 text-xs font-medium text-fg hover:border-accent/50 transition-colors"
     >
-      <span data-auth-avatar class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-neon-pink text-[10px] font-bold text-white"></span>
-      <span data-auth-name class="max-w-[6rem] truncate hidden sm:inline"></span>
+      <span data-auth-avatar class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white"></span>
+      <span data-auth-name class="max-w-[6rem] truncate hidden sm:inline pr-1"></span>
     </button>
     <div
       data-auth-dropdown
-      class="invisible absolute right-0 top-10 z-50 min-w-[10rem] glass-panel rounded-lg p-1 text-sm opacity-0 shadow-md dark:shadow-2xl transition-all"
+      class="invisible absolute right-0 top-10 z-50 min-w-[10rem] panel p-1 text-sm opacity-0 shadow-lg transition-opacity"
     >
       <button
         type="button"
         data-auth-signout
-        class="block w-full rounded-md px-3 py-2 text-left text-text-muted hover:bg-neon-pink/10 hover:text-neon-pink transition-colors text-xs font-bold uppercase tracking-widest"
+        class="block w-full rounded-md px-3 py-2 text-left text-fg-2 hover:bg-surface-hover hover:text-fg transition-colors text-sm"
       >
-        {t('auth.signout')} →
+        {t('auth.signout')}
       </button>
     </div>
   </div>

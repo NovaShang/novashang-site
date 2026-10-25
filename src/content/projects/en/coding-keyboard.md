@@ -5,6 +5,7 @@ url: https://github.com/NovaShang/CodingKeyboard
 repo: https://github.com/NovaShang/CodingKeyboard
 tags: ["iOS", "Keyboard"]
 lang: en
+group: tools
 featured: false
 order: 10
 ---

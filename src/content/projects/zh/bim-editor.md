@@ -5,6 +5,7 @@ url: https://editor.bim-claw.com
 repo: https://github.com/NovaShang/BimEditor
 tags: ["BIM", "3D", "Web"]
 lang: zh
+group: building
 featured: false
 order: 6
 ---
