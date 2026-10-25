@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
+@theme inline {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
 
   /* Semantic tokens resolve through runtime CSS vars so they swap with theme */
@@ -32,7 +32,8 @@
 }
 
 /* Dark: the colors from the 2024 hand-written site */
-html.dark {
+html.dark,
+.always-dark {
   --c-bg: #070d12;
   --c-surface: #0f1a25;
   --c-surface-hover: #132130;

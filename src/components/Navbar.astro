@@ -18,7 +18,7 @@ const isActive = (match: string) => path.startsWith(`/${lang}/${match}`);
 const targetLang = lang === 'zh' ? 'en' : 'zh';
 const switchUrl = switchLangPath(path, lang, targetLang);
 ---
-<header class="fixed top-0 inset-x-0 z-50 h-13 md:h-14 bg-nav" style="box-shadow: var(--c-nav-shadow)">
+<header class="always-dark fixed top-0 inset-x-0 z-50 h-13 md:h-14 bg-nav text-fg" style="box-shadow: var(--c-nav-shadow)">
   <a href={localizedPath('/', lang)} aria-label={t('site.title')} class="absolute left-0 top-0">
     <BrandLogo />
   </a>
