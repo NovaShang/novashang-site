@@ -29,14 +29,16 @@ const links = [
 ];
 ---
 <BaseLayout>
-  {/* Intro over the Mountain Lion galaxy wallpaper */}
-  <section class="hero relative overflow-hidden">
+  {/* Intro over the galaxy: the Mountain Lion wallpaper first, then a real-time
+      render of it fades in on top once WebGL is up. */}
+  <section class="hero relative overflow-hidden md:min-h-[600px] md:flex md:items-center" data-galaxy-host>
     <picture>
       <source srcset="/background.webp" type="image/webp" />
       <img src="/background.jpeg" alt="" fetchpriority="high" class="absolute inset-0 w-full h-full object-cover object-[60%_50%]" />
     </picture>
-    <div class="hero-shade absolute inset-0"></div>
-    <div class="relative max-w-[1120px] mx-auto px-5 md:px-8 pt-20 pb-16 md:pt-32 md:pb-24">
+    <canvas data-galaxy class="galaxy-canvas absolute inset-0 w-full h-full" aria-hidden="true"></canvas>
+    <div class="hero-shade absolute inset-0 pointer-events-none"></div>
+    <div class="relative w-full max-w-[1120px] mx-auto px-5 md:px-8 pt-16 pb-56 md:py-24">
       <h1 class="text-[40px] md:text-[56px] leading-[1.1] font-bold tracking-tight text-white">{t('home.hero.name')}</h1>
       <p class="mt-4 md:mt-5 text-[18px] md:text-[21px] leading-snug text-white/90 max-w-[640px]">{t('home.hero.role')}</p>
       <p class="mt-4 text-[15px] md:text-[16px] leading-[1.75] text-white/65 max-w-[600px]">{t('home.hero.bio')}</p>
@@ -79,21 +81,44 @@ const links = [
   </div>
 </BaseLayout>
 
+<script>
+  import { mountGalaxy } from '../lib/galaxy/galaxy';
+
+  let galaxy: ReturnType<typeof mountGalaxy> = null;
+  function start() {
+    const canvas = document.querySelector<HTMLCanvasElement>('[data-galaxy]');
+    if (!canvas) return;
+    try {
+      galaxy = mountGalaxy(canvas, {
+        // desktop: core right of the text; phones: core in the lower right
+        center: (aspect) => (aspect > 1.2 ? [0.32, 0.02] : [0.3, -0.42]),
+        onReady: () => canvas.classList.add('is-ready'),
+      });
+    } catch (e) {
+      console.warn('galaxy disabled', e);   // keep the static wallpaper
+    }
+  }
+  document.addEventListener('astro:page-load', start);
+  document.addEventListener('astro:before-swap', () => { galaxy?.destroy(); galaxy = null; });
+</script>
+
 <style>
-  .hero { background: #070d12; }
+  .hero { background: #070d12; touch-action: pan-y; }
+  .galaxy-canvas { opacity: 0; transition: opacity 900ms ease; }
+  .galaxy-canvas:global(.is-ready) { opacity: 1; }
   .hero-shade {
     background:
-      linear-gradient(90deg, rgba(7, 13, 18, 0.82) 0%, rgba(7, 13, 18, 0.55) 45%, rgba(7, 13, 18, 0.25) 100%);
+      linear-gradient(90deg, rgba(7, 13, 18, 0.72) 0%, rgba(7, 13, 18, 0.35) 45%, rgba(7, 13, 18, 0) 75%);
   }
   :global(html.dark) .hero-shade {
     background:
-      linear-gradient(180deg, rgba(7, 13, 18, 0) 70%, #070d12 100%),
-      linear-gradient(90deg, rgba(7, 13, 18, 0.82) 0%, rgba(7, 13, 18, 0.55) 45%, rgba(7, 13, 18, 0.25) 100%);
+      linear-gradient(180deg, rgba(7, 13, 18, 0) 75%, #070d12 100%),
+      linear-gradient(90deg, rgba(7, 13, 18, 0.72) 0%, rgba(7, 13, 18, 0.35) 45%, rgba(7, 13, 18, 0) 75%);
   }
   @media (max-width: 767px) {
-    .hero-shade { background: rgba(7, 13, 18, 0.6); }
+    .hero-shade { background: linear-gradient(180deg, rgba(7, 13, 18, 0.6) 0%, rgba(7, 13, 18, 0.3) 55%, rgba(7, 13, 18, 0) 75%); }
     :global(html.dark) .hero-shade {
-      background: linear-gradient(180deg, rgba(7, 13, 18, 0.55) 0%, rgba(7, 13, 18, 0.6) 75%, #070d12 100%);
+      background: linear-gradient(180deg, rgba(7, 13, 18, 0.6) 0%, rgba(7, 13, 18, 0.3) 55%, rgba(7, 13, 18, 0) 80%, #070d12 100%);
     }
   }
 </style>
