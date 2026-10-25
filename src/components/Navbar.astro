@@ -1,7 +1,6 @@
 ---
 import { getLangFromUrl, localizedPath, switchLangPath, useTranslations } from '../i18n/utils';
 import AuthMenu from './AuthMenu.astro';
-import ThemeToggle from './ThemeToggle.astro';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
@@ -17,7 +16,7 @@ const isActive = (match: string) => path.startsWith(`/${lang}/${match}`);
 const targetLang = lang === 'zh' ? 'en' : 'zh';
 const switchUrl = switchLangPath(path, lang, targetLang);
 ---
-<header class="always-dark fixed top-0 inset-x-0 z-50 h-13 md:h-14 bg-nav text-fg" style="box-shadow: var(--c-nav-shadow)">
+<header class="fixed top-0 inset-x-0 z-50 h-13 md:h-14 bg-nav text-fg" style="box-shadow: var(--c-nav-shadow)">
   <div class="h-full flex items-center justify-between pl-[72px] md:pl-[92px] pr-3 md:pr-6">
     <a href={localizedPath('/', lang)} data-nav-title class="text-[16px] md:text-[17px] font-semibold text-fg tracking-tight">
       {t('home.hero.name')}
@@ -44,7 +43,6 @@ const switchUrl = switchLangPath(path, lang, targetLang);
       >
         {lang === 'zh' ? 'EN' : '中文'}
       </a>
-      <ThemeToggle />
       <span class="hidden md:inline-flex ml-1"><AuthMenu /></span>
     </nav>
   </div>

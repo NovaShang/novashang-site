@@ -335,6 +335,35 @@ void main() {
   outColor = vec4(col, 1.0 - T);
 }`;
 
+// The magenta tile, as a textured quad in the scene. Corners are placed on
+// the CPU each frame; this just projects them with the same camera as the stars.
+export const tileVert = /* glsl */ `#version 300 es
+in vec3 aPos;
+in vec2 aUv;
+uniform vec3 uCamPos, uRight, uUp, uFwd;
+uniform float uTan, uAspect;
+uniform vec2 uShift;
+out vec2 vUv;
+void main() {
+  vec3 d = aPos - uCamPos;
+  vec3 v = vec3(dot(d, uRight), dot(d, uUp), dot(d, uFwd));
+  vec2 ndc = vec2(v.x / (v.z * uTan * uAspect), v.y / (v.z * uTan)) + uShift;
+  vUv = aUv;
+  gl_Position = vec4(ndc, 0.0, 1.0);
+}`;
+
+export const tileFrag = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vUv;
+out vec4 outColor;
+uniform sampler2D uTex;
+uniform float uShade;      // a touch darker as it turns away from the camera
+uniform float uAlpha;
+void main() {
+  vec4 c = texture(uTex, vUv);
+  outColor = vec4(c.rgb * uShade, c.a) * uAlpha;
+}`;
+
 export const accumFrag = /* glsl */ `#version 300 es
 precision highp float;
 in vec2 vUv;

@@ -4,24 +4,28 @@ import '../styles/global.css';
 import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
 import BrandLogo from '../components/BrandLogo.astro';
+import GalaxyBackground from '../components/GalaxyBackground.astro';
+import type { Shot } from '../lib/galaxy/director';
 import { getLangFromUrl, useTranslations } from '../i18n/utils';
 
 interface Props {
   title?: string;
   description?: string;
   noFooter?: boolean;
+  /** Which camera shot of the galaxy background this page uses. */
+  shot?: Shot;
 }
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
-const { title, description, noFooter = false } = Astro.props;
+const { title, description, noFooter = false, shot = 'post' } = Astro.props;
 
 const fullTitle = title ? `${title} · ${t('site.title')}` : t('site.title');
 const meta = description ?? t('site.description');
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://novashang.com').toString();
 ---
 <!doctype html>
-<html lang={lang === 'zh' ? 'zh-CN' : 'en'} class="dark">
+<html lang={lang === 'zh' ? 'zh-CN' : 'en'}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -39,28 +43,14 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://novashang.c
     <link rel="alternate" hreflang="en" href={new URL(`/en${Astro.url.pathname.replace(/^\/(zh|en)/, '')}`, Astro.site ?? 'https://novashang.com').toString()} />
     <meta name="theme-color" content="#1a2c3f" />
 
-    {/* No-flash theme init. Dark unless the visitor picked light (or system, and the system is light). */}
-    <script is:inline>
-      (function () {
-        function apply() {
-          try {
-            var stored = localStorage.getItem('theme') || 'dark';
-            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var isDark = stored === 'dark' || (stored === 'system' && prefersDark);
-            document.documentElement.classList.toggle('dark', isDark);
-          } catch (e) {}
-        }
-        apply();
-        document.addEventListener('astro:after-swap', apply);
-      })();
-    </script>
 
     <ClientRouter />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
-  <body class="min-h-screen flex flex-col bg-bg font-sans">
+  <body class="min-h-screen flex flex-col font-sans" data-shot={shot}>
+    <GalaxyBackground />
     <Navbar />
     <BrandLogo />
     <main class="flex-1">

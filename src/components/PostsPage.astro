@@ -13,7 +13,7 @@ const t = useTranslations(lang);
 const posts = (await getCollection('posts', ({ data }) => data.lang === lang && !data.draft))
   .sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime());
 ---
-<BaseLayout title={t('posts.title')}>
+<BaseLayout title={t('posts.title')} shot="posts">
   <section class="max-w-[1120px] mx-auto px-5 md:px-8 pt-14 md:pt-20">
     <h1 class="text-[32px] md:text-[40px] font-bold tracking-tight text-fg">{t('posts.title')}</h1>
     <p class="mt-3 text-[16px] text-fg-2">{t('posts.subtitle')}</p>

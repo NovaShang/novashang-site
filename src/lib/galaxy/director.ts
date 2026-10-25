@@ -1,182 +1,162 @@
-// Camera choreography for the galaxy: a few named shots, timed moves between
-// them, and the small live offsets from mouse, touch, tilt and scroll on top.
+// Camera choreography for the galaxy background. It isn't something you play
+// with; the camera simply follows the page:
 //
-//   intro    the render first matches the wallpaper exactly, then swings round
-//            and lifts a little before settling back, so you see it's 3D
-//   explore  a tap flies in close to the core; drag to look around; tap again
-//            (or leave it alone) to fly back
-//   tour     after a while with no input, a slow drift: face-on, close in, home
-//   scroll   leaving the hero tilts the disk toward face-on and pulls back
+//   home     starts on the Mountain Lion wallpaper's framing (with a one-time
+//            reveal), then drifts along a path toward face-on as you scroll
+//   pages    each section has its own shot; navigating flies between them
+//
+// Mouse position and phone tilt add a little parallax on top.
 
 export interface Pose {
   /** Orbit around the disk normal, radians. */
   azimuth: number;
-  /** Camera height above the disk plane, radians. */
+  /** Camera height above the disk plane, radians (kept below π/2). */
   elevation: number;
   /** Distance from the galaxy centre. */
   distance: number;
   /** Screen roll, radians. */
   roll: number;
+  /** Where the galaxy centre sits on screen, in NDC. */
+  cx: number;
+  cy: number;
 }
 
-export type Mode = 'home' | 'explore' | 'tour';
+export type Shot = 'home' | 'posts' | 'projects' | 'post';
 
-export const SHOTS = {
-  /** The Mountain Lion wallpaper. */
-  home: { azimuth: 0.35, elevation: 0.115, distance: 3.0, roll: -0.52 },
-  reveal: { azimuth: 0.78, elevation: 0.36, distance: 2.6, roll: -0.44 },
-  face: { azimuth: 1.15, elevation: 1.2, distance: 3.4, roll: -0.25 },
-  core: { azimuth: 0.62, elevation: 0.09, distance: 1.75, roll: -0.46 },
-} satisfies Record<string, Pose>;
+type Frame = Omit<Pose, 'cx' | 'cy'> & { wide: [number, number]; tall: [number, number] };
 
-interface Move { to: Pose; dur: number; hold?: number }
+const pose = (f: Frame, aspect: number): Pose => {
+  const [cx, cy] = aspect > 1.2 ? f.wide : f.tall;
+  return { azimuth: f.azimuth, elevation: f.elevation, distance: f.distance, roll: f.roll, cx, cy };
+};
 
-const KEYS = ['azimuth', 'elevation', 'distance', 'roll'] as const;
+/** The Mountain Lion wallpaper. */
+const HOME: Frame = { azimuth: 0.35, elevation: 0.115, distance: 3.0, roll: -0.52, wide: [0.32, 0.02], tall: [0.3, -0.42] };
+/** Where the one-time reveal swings to before settling back on HOME. */
+const REVEAL: Frame = { azimuth: 0.78, elevation: 0.36, distance: 2.6, roll: -0.44, wide: [0.3, 0.02], tall: [0.3, -0.4] };
+
+/** Scrolling the landing page walks the camera along these, top to bottom. */
+const HOME_PATH: Frame[] = [
+  HOME,
+  { azimuth: 0.9, elevation: 0.42, distance: 3.25, roll: -0.42, wide: [0.36, 0.05], tall: [0.3, -0.1] },
+  { azimuth: 1.55, elevation: 0.95, distance: 3.7, roll: -0.25, wide: [0.42, 0.05], tall: [0.25, 0.1] },
+  { azimuth: 2.15, elevation: 1.42, distance: 4.2, roll: -0.1, wide: [0.45, 0.0], tall: [0.2, 0.15] },
+];
+
+const PAGES: Record<Exclude<Shot, 'home'>, Frame> = {
+  /** looking straight down on the disk */
+  posts: { azimuth: 0.6, elevation: 1.5, distance: 4.3, roll: 0.35, wide: [0.5, 0.05], tall: [0.25, -0.35] },
+  /** edge-on from the far side: a thin bright line across the page */
+  projects: { azimuth: 2.9, elevation: 0.035, distance: 3.7, roll: -0.14, wide: [0.1, -0.25], tall: [0.0, -0.5] },
+  /** far away and small, so long reading stays calm */
+  post: { azimuth: 4.0, elevation: 0.62, distance: 6.2, roll: -0.3, wide: [0.62, 0.42], tall: [0.35, 0.6] },
+};
+
+const KEYS = ['azimuth', 'elevation', 'distance', 'roll', 'cx', 'cy'] as const;
 const mix = (a: Pose, b: Pose, t: number): Pose =>
   Object.fromEntries(KEYS.map((k) => [k, a[k] + (b[k] - a[k]) * t])) as unknown as Pose;
-// slow-in, slow-out, a little gentler than cubic at the ends
+// slow-in, slow-out
 const ease = (t: number) => t * t * t * (t * (6 * t - 15) + 10);
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-const IDLE_TOUR_S = 28;
-const EXPLORE_TIMEOUT_S = 25;
+/** Catmull-Rom through the path, so the camera never visibly turns a corner. */
+function along(path: Pose[], s: number): Pose {
+  const n = path.length - 1;
+  const x = clamp(s, 0, 1) * n;
+  const i = Math.min(n - 1, Math.floor(x));
+  const t = x - i;
+  const p0 = path[Math.max(0, i - 1)], p1 = path[i], p2 = path[i + 1], p3 = path[Math.min(n, i + 2)];
+  const out = {} as Pose;
+  for (const k of KEYS) {
+    const a = p0[k], b = p1[k], c = p2[k], d = p3[k];
+    out[k] = 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (3 * b - a - 3 * c + d) * t * t * t);
+  }
+  return out;
+}
+
+const FLIGHT_S = 2.8;
 
 export class Director {
-  mode: Mode = 'home';
-  private base: Pose = { ...SHOTS.home };
-  private queue: Move[] = [];
-  private move: { from: Pose; to: Pose; t: number; dur: number; hold: number } | null = null;
-  private idle = 0;
-
-  // live offsets, each smoothed toward its target
-  private look = { az: 0, el: 0 };          // mouse / gyro parallax
-  private lookTarget = { az: 0, el: 0 };
-  private orbit = { az: 0, el: 0 };         // touch or mouse drag
-  private orbitTarget = { az: 0, el: 0 };
-  private dragging = false;
+  private shot: Shot = 'home';
+  private aspect = 16 / 9;
+  private scrollTarget = 0;
   private scroll = 0;
-  private last: Pose = { ...SHOTS.home };
+  private flight: { from: Pose; t: number } | null = null;
+  private introT = -1;
+  private look = { az: 0, el: 0 };
+  private lookTarget = { az: 0, el: 0 };
+  private last: Pose | null = null;
 
-  constructor(private onMode?: (m: Mode) => void) {}
+  setAspect(a: number) { this.aspect = a; }
 
-  private setMode(m: Mode) {
-    if (m !== this.mode) { this.mode = m; this.onMode?.(m); }
+  /** Switch to a page's shot; flies there from wherever the camera is now. */
+  setShot(shot: Shot, fly = true) {
+    if (shot === this.shot) return;
+    this.shot = shot;
+    this.scroll = this.scrollTarget;
+    this.flight = fly && this.last ? { from: this.last, t: 0 } : null;
+    if (shot !== 'home') this.introT = -1;
   }
 
-  private play(moves: Move[]) {
-    this.queue = moves;
-    this.move = null;
-  }
+  /** The reveal: the render matches the wallpaper, then shows it's 3D. */
+  intro() { if (this.shot === 'home') this.introT = 0; }
 
-  /** Call once the first frame is on screen. */
-  intro() {
-    this.play([
-      { to: SHOTS.home, dur: 0, hold: 1.4 },
-      { to: SHOTS.reveal, dur: 5.5, hold: 0.4 },
-      { to: SHOTS.home, dur: 5.0 },
-    ]);
-  }
+  /** Page scroll progress, 0 at the top and 1 at the bottom. */
+  setScroll(s: number) { this.scrollTarget = clamp(s, 0, 1); }
 
-  tap() {
-    this.touch();
-    if (this.mode === 'explore') {
-      this.orbitTarget = { az: 0, el: 0 };
-      this.play([{ to: SHOTS.home, dur: 2.8 }]);
-      this.setMode('home');
-    } else {
-      this.play([{ to: SHOTS.core, dur: 3.0 }]);
-      this.setMode('explore');
-    }
-  }
+  /** Mouse position or phone tilt, -1..1 on each axis. */
+  pointer(nx: number, ny: number) { this.lookTarget = { az: nx * 0.22, el: -ny * 0.06 }; }
 
-  /** Mouse position or phone tilt, as -1..1 on each axis. */
-  pointer(nx: number, ny: number) {
-    this.lookTarget = { az: nx * 0.28, el: -ny * 0.08 };
-    // a mouse that just wanders across the page shouldn't cancel the tour
-    if (this.mode !== 'tour') this.idle = 0;
-  }
-
-  dragStart() { this.dragging = true; this.touch(); }
-  dragBy(dx: number, dy: number) {
-    // wider freedom up close
-    const free = this.mode === 'explore';
-    const k = free ? 1 : 0.6;
-    this.orbitTarget.az = clamp(this.orbitTarget.az + dx * 0.006 * k, free ? -1.6 : -0.6, free ? 1.6 : 0.6);
-    this.orbitTarget.el = clamp(this.orbitTarget.el - dy * 0.004 * k, free ? -0.15 : -0.08, free ? 1.0 : 0.25);
-    this.touch();
-  }
-  dragEnd() { this.dragging = false; }
-
-  /** 0 at the top of the hero, 1 once it has scrolled away. */
-  setScroll(s: number) { this.scroll = clamp(s, 0, 1); }
-
-  /** Any deliberate input: cancels the idle tour and resets the timers. */
-  touch() {
-    this.idle = 0;
-    if (this.mode === 'tour') {
-      this.play([{ to: SHOTS.home, dur: 3.0 }]);
-      this.setMode('home');
-    }
+  private target(): Pose {
+    const a = this.aspect;
+    if (this.shot === 'home') return along(HOME_PATH.map((f) => pose(f, a)), this.scroll);
+    const base = pose(PAGES[this.shot], a);
+    // other pages turn just a little as you read down them
+    return { ...base, azimuth: base.azimuth + this.scroll * 0.35 };
   }
 
   update(dt: number): { view: Pose; speed: number } {
-    this.idle += dt;
+    // follow the scroll with a little lag so wheel steps don't show
+    this.scroll += (this.scrollTarget - this.scroll) * (1 - Math.exp(-dt * 3));
 
-    // timed moves
-    if (!this.move && this.queue.length) {
-      const m = this.queue.shift()!;
-      this.move = { from: { ...this.base }, to: m.to, t: 0, dur: m.dur, hold: m.hold ?? 0 };
-    }
-    if (this.move) {
-      const m = this.move;
-      m.t += dt;
-      this.base = m.dur > 0 ? mix(m.from, m.to, ease(Math.min(1, m.t / m.dur))) : { ...m.to };
-      if (m.t >= m.dur + m.hold) {
-        this.move = null;
-        if (!this.queue.length && this.mode === 'tour') this.setMode('home');
-      }
+    let p = this.target();
+
+    if (this.introT >= 0) {
+      this.introT += dt;
+      const t = this.introT;
+      const w = t < 1.4 ? 0 : t < 6.9 ? ease((t - 1.4) / 5.5) : t < 7.3 ? 1 : t < 12.3 ? 1 - ease((t - 7.3) / 5) : 0;
+      p = mix(p, pose(REVEAL, this.aspect), w * (1 - this.scroll));
+      if (t >= 12.3) this.introT = -1;
     }
 
-    // idle behaviour
-    const busy = this.move || this.queue.length;
-    if (!busy && this.mode === 'home' && this.idle > IDLE_TOUR_S) {
-      this.idle = 0;
-      this.setMode('tour');
-      this.play([
-        { to: SHOTS.face, dur: 9, hold: 4 },
-        { to: SHOTS.core, dur: 8, hold: 4 },
-        { to: SHOTS.home, dur: 8 },
-      ]);
+    if (this.flight) {
+      this.flight.t += dt;
+      const k = Math.min(1, this.flight.t / FLIGHT_S);
+      p = mix(this.flight.from, p, ease(k));
+      if (k >= 1) this.flight = null;
     }
-    if (!busy && this.mode === 'explore' && this.idle > EXPLORE_TIMEOUT_S) this.tap();
 
-    // drag offsets spring back at home, stay put while exploring
-    if (!this.dragging && this.mode !== 'explore') {
-      this.orbitTarget.az *= Math.exp(-dt * 0.8);
-      this.orbitTarget.el *= Math.exp(-dt * 0.8);
-    }
     const k = 1 - Math.exp(-dt * 2.5);
     this.look.az += (this.lookTarget.az - this.look.az) * k;
     this.look.el += (this.lookTarget.el - this.look.el) * k;
-    this.orbit.az += (this.orbitTarget.az - this.orbit.az) * k;
-    this.orbit.el += (this.orbitTarget.el - this.orbit.el) * k;
-
     // parallax is gentler up close, where small angles move a lot on screen
-    const lookScale = this.base.distance / SHOTS.home.distance;
-    const s = ease(this.scroll);
+    const s = p.distance / HOME.distance;
     const view: Pose = {
-      azimuth: this.base.azimuth + this.look.az * lookScale + this.orbit.az,
-      elevation: clamp(this.base.elevation + this.look.el * lookScale + this.orbit.el + s * 0.55, 0.03, 1.45),
-      distance: this.base.distance + s * 0.8,
-      roll: this.base.roll,
+      ...p,
+      azimuth: p.azimuth + this.look.az / s,
+      elevation: clamp(p.elevation + this.look.el / s, 0.02, 1.5),
     };
-    const speed = Math.abs(view.azimuth - this.last.azimuth) + Math.abs(view.elevation - this.last.elevation)
-      + Math.abs(view.distance - this.last.distance) * 0.4 + Math.abs(view.roll - this.last.roll);
+
+    const l = this.last ?? view;
+    const speed = Math.abs(view.azimuth - l.azimuth) + Math.abs(view.elevation - l.elevation)
+      + Math.abs(view.distance - l.distance) * 0.3 + Math.abs(view.roll - l.roll)
+      + Math.abs(view.cx - l.cx) + Math.abs(view.cy - l.cy);
     this.last = view;
     return { view, speed };
   }
 
-  /** Jump straight to a shot (for screenshots and tuning). */
-  jump(p: Pose) { this.queue = []; this.move = null; this.base = { ...p }; }
-}
+  isHome() { return this.shot === 'home'; }
 
-function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
+  /** Jump straight to a page's shot without flying (for screenshots). */
+  jump(shot: Shot) { this.shot = shot; this.flight = null; this.introT = -1; this.last = null; }
+}

@@ -1,8 +1,6 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme inline {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
 
@@ -18,22 +16,8 @@
   --color-accent: #e74dae;
 }
 
-/* Light */
+/* Dark only: the colours from the 2024 hand-written site */
 :root {
-  --c-bg: #f3f5f7;
-  --c-surface: #ffffff;
-  --c-surface-hover: #ffffff;
-  --c-nav: #ffffff;
-  --c-fg: #0d1620;
-  --c-fg-2: #3a4652;
-  --c-muted: #6b7682;
-  --c-line: rgba(13, 22, 32, 0.09);
-  --c-nav-shadow: 0 1px 0 rgba(13, 22, 32, 0.08), 0 4px 16px rgba(13, 22, 32, 0.04);
-}
-
-/* Dark: the colors from the 2024 hand-written site */
-html.dark,
-.always-dark {
   --c-bg: #070d12;
   --c-surface: #0f1a25;
   --c-surface-hover: #132130;
@@ -43,6 +27,7 @@ html.dark,
   --c-muted: #7f8b97;
   --c-line: rgba(255, 255, 255, 0.07);
   --c-nav-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
 }
 
 html {
@@ -138,20 +123,6 @@ a.panel:hover .panel-title { color: #e74dae; }
 .prose-nova blockquote p::before, .prose-nova blockquote p::after { content: none; }
 .prose-nova img { border-radius: 8px; }
 .prose-nova table { font-size: 15px; }
-
-/* Shiki dual-theme via CSS variables */
-html:not(.dark) .astro-code,
-html:not(.dark) .astro-code span {
-  background-color: var(--shiki-light-bg) !important;
-  color: var(--shiki-light) !important;
-}
-html.dark .astro-code,
-html.dark .astro-code span {
-  background-color: var(--shiki-dark-bg) !important;
-  color: var(--shiki-dark) !important;
-  font-style: var(--shiki-dark-font-style) !important;
-  font-weight: var(--shiki-dark-font-weight) !important;
-}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }

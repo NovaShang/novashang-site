@@ -1,0 +1,92 @@
+---
+// The galaxy behind every page. It persists across navigations so the camera
+// can fly from one page's shot to the next (see src/lib/galaxy/director.ts).
+---
+<div class="galaxy-bg" transition:persist="galaxy-bg" aria-hidden="true">
+  <picture class="galaxy-fallback">
+    <source srcset="/background.webp" type="image/webp" />
+    <img src="/background.jpeg" alt="" fetchpriority="high" />
+  </picture>
+  <canvas data-galaxy></canvas>
+  <div class="galaxy-dim" data-galaxy-dim></div>
+</div>
+
+<script>
+  import { mountGalaxy } from '../lib/galaxy/galaxy';
+  import { brandTarget } from '../lib/brandTarget';
+  import type { Shot } from '../lib/galaxy/director';
+
+  type Galaxy = NonNullable<ReturnType<typeof mountGalaxy>>;
+  let galaxy: Galaxy | null = null;
+  let failed = false;
+
+  // how much the page dims the galaxy so text on top stays easy to read
+  const DIM: Record<Shot, number> = { home: 0, posts: 0.35, projects: 0.3, post: 0.55 };
+
+  const shotOfPage = () => (document.body.dataset.shot as Shot | undefined) ?? 'post';
+
+  function updateDim() {
+    const el = document.querySelector<HTMLElement>('[data-galaxy-dim]');
+    if (!el) return;
+    const shot = shotOfPage();
+    // on the landing page the galaxy dims a little once you're past the intro
+    const s = shot === 'home' ? Math.min(1, Math.max(0, (scrollY / innerHeight - 0.25) / 0.6)) : 1;
+    el.style.opacity = String(shot === 'home' ? s * 0.35 : DIM[shot]);
+  }
+
+  function onPage() {
+    const shot = shotOfPage();
+    updateDim();
+    if (galaxy) { galaxy.setShot(shot); return; }
+    if (failed) return;
+    const canvas = document.querySelector<HTMLCanvasElement>('[data-galaxy]');
+    if (!canvas) return;
+    brandTarget.pending = true;
+    try {
+      galaxy = mountGalaxy(canvas, {
+        shot,
+        // the reveal plays once per visit, and only when arriving on the landing page
+        intro: shot === 'home' && !sessionStorage.getItem('galaxy-intro'),
+        onReady: () => { canvas.classList.add('is-ready'); brandTarget.pending = false; },
+      });
+      sessionStorage.setItem('galaxy-intro', '1');
+      (window as unknown as { galaxy?: Galaxy | null }).galaxy = galaxy;
+      if (!galaxy) { failed = true; brandTarget.pending = false; }
+    } catch (e) {
+      failed = true;
+      brandTarget.pending = false;
+      console.warn('galaxy disabled', e);   // keep the static wallpaper
+    }
+  }
+
+  document.addEventListener('astro:page-load', onPage);
+  addEventListener('scroll', updateDim, { passive: true });
+</script>
+
+<style>
+  .galaxy-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    background: #070d12;
+    pointer-events: none;
+  }
+  .galaxy-fallback img,
+  .galaxy-bg canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 60% 50%;
+  }
+  .galaxy-bg canvas { opacity: 0; transition: opacity 900ms ease; }
+  .galaxy-bg canvas:global(.is-ready) { opacity: 1; }
+  .galaxy-dim {
+    position: absolute;
+    inset: 0;
+    background: #070d12;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+  }
+</style>

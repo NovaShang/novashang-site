@@ -57,8 +57,11 @@ const t = useTranslations(lang);
     will-change: transform;
     pointer-events: none;
   }
-  /* on the landing page the tile starts in the hero; hide it until placed */
-  :global(html:has([data-brand-slot])) .brand:not(.is-placed) { opacity: 0; }
+  /* on the landing page the tile starts in the galaxy scene; hide this copy
+     until it's placed, and whenever the scene is drawing it */
+  :global(body[data-shot='home']) .brand:not(.is-placed),
+  .brand.in-scene { opacity: 0; }
+  .brand.in-scene .brand-tile { pointer-events: none; }
   @media (min-width: 768px) {
     .brand-tile { transform: translate(-42px, -40px) rotate(-15deg); }
     .brand-mark { transform: translate(23.6px, 10.1px); }
