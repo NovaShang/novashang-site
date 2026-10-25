@@ -21,9 +21,9 @@ uniform float uAspect;
 void main() {
   vec2 d = (vUv - uCenter) * vec2(uAspect, 1.0);
   float glow = exp(-dot(d, d) * 1.6);
-  vec3 base = vec3(0.027, 0.050, 0.078);
-  vec3 near = vec3(0.075, 0.125, 0.185);
-  outColor = vec4(mix(base, near, glow * 0.85), 1.0);
+  vec3 base = vec3(0.035, 0.068, 0.110);
+  vec3 near = vec3(0.100, 0.175, 0.270);
+  outColor = vec4(mix(base, near, glow), 1.0);
 }`;
 
 export const starsVert = /* glsl */ `#version 300 es
@@ -85,36 +85,19 @@ void main() {
   outColor = vec4(vColor * a, 0.0);
 }`;
 
-export const volumeFrag = /* glsl */ `#version 300 es
+// Shared by the bake pass and the ray marcher.
+const common = /* glsl */ `
 precision highp float;
 precision highp sampler3D;
-in vec2 vUv;
-out vec4 outColor;
-
 uniform sampler3D uNoise;
-uniform vec3 uCamPos, uRight, uUp, uFwd;
-uniform float uTan, uAspect;
-uniform vec2 uShift;
-uniform float uTime;
-uniform float uSpin;      // pattern rotation, radians
-uniform int uSteps;
-uniform float uOctaves;
-uniform float uFrame;     // golden-ratio sequence for temporal jitter
-uniform vec2 uTexel;
-
-const float PI = 3.14159265;
 
 float n3(vec3 p) { return texture(uNoise, p).r; }
-
 float fbm3(vec3 p) {
   return 0.5 * n3(p) + 0.25 * n3(p * 2.03 + 0.13) + 0.125 * n3(p * 4.11 + 0.37);
 }
 float fbm5(vec3 p) {
-  float s = fbm3(p);
-  if (uOctaves > 3.5) s += 0.0625 * n3(p * 8.3 + 0.71) + 0.03125 * n3(p * 16.7 + 0.29);
-  return s;
+  return fbm3(p) + 0.0625 * n3(p * 8.3 + 0.71) + 0.03125 * n3(p * 16.7 + 0.29);
 }
-
 mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 // Two logarithmic spiral arms; 1 on an arm, 0 between arms.
@@ -122,53 +105,101 @@ float arms(float th, float r, float offset) {
   return 0.5 + 0.5 * cos(2.0 * (th + log(r + 0.04) * 3.4 + offset));
 }
 
-// Emitted light (rgb) and dust density (a) at a point in galaxy space.
-vec4 sampleGalaxy(vec3 pw) {
-  vec3 p = pw;
-  p.xz = rot(uSpin) * p.xz;
+// Extent of the baked field in galaxy space.
+const float FIELD_R = 1.25;
+const float FIELD_H = 0.2;
+
+// Dust density from the slow-varying fields; 'cloud' may carry runtime detail.
+float dustShape(vec3 p, float big, float cloud) {
+  float r = length(p.xz);
+  float slab = abs(p.y - (big - 0.44) * 0.07);
+  float thick = 0.008 + 0.045 * smoothstep(0.42, 0.75, cloud);
+  float d = exp(-slab / thick);
+  d *= smoothstep(0.1, 0.3, r) * exp(-r / 0.85) * 1.8;
+  float ad = arms(atan(p.z, p.x), r, (big - 0.44) * 2.2 - 0.5);
+  // denser and continuous inside, breaking into filaments further out
+  float cut = 0.43 + 0.09 * smoothstep(0.35, 1.2, r);
+  d *= mix(0.2, 1.0, ad) * smoothstep(cut, cut + 0.04, cloud);
+  return d;
+}
+`;
+
+// Bakes the expensive noise into a 3D texture once, one layer per draw:
+//   r = cloud field (domain-warped fbm), g = transmittance toward the core,
+//   b = stellar clumping, a = large-scale irregularity
+export const bakeFrag = /* glsl */ `#version 300 es
+${common}
+in vec2 vUv;
+out vec4 outColor;
+uniform float uY;             // galaxy-space height of this layer
+
+float bigAt(vec3 p) { return fbm3(p * 1.3 + 3.1); }
+float cloudAt(vec3 p) {
+  vec3 w = vec3(fbm3(p * 1.7 + 1.3), fbm3(p * 1.7 + 4.7), fbm3(p * 1.7 + 9.1)) - 0.45;
+  return fbm5(p * 5.2 + w * 2.1);
+}
+
+void main() {
+  vec3 p = vec3((vUv.x - 0.5) * 2.0 * FIELD_R, uY, (vUv.y - 0.5) * 2.0 * FIELD_R);
+  float big = bigAt(p);
+  float cloud = cloudAt(p);
+  // march toward the core to see how much dust shades this point
+  float od = 0.0;
+  float dist = length(p);
+  vec3 l = -p / max(dist, 1e-4);
+  float stepLen = min(dist, 0.5) / 12.0;
+  for (int i = 1; i <= 12; i++) {
+    vec3 q = p + l * stepLen * float(i);
+    od += dustShape(q, bigAt(q), cloudAt(q)) * stepLen;
+  }
+  outColor = vec4(cloud, exp(-od * 30.0), fbm3(p * 7.0 + 7.0), big);
+}`;
+
+export const volumeFrag = /* glsl */ `#version 300 es
+${common}
+in vec2 vUv;
+out vec4 outColor;
+
+uniform sampler3D uField;
+uniform vec3 uCamPos, uRight, uUp, uFwd;
+uniform float uTan, uAspect;
+uniform vec2 uShift;
+uniform float uSpin;      // pattern rotation, radians
+uniform int uSteps;
+uniform float uFrame;     // golden-ratio sequence for temporal jitter
+uniform vec2 uTexel;
+
+vec4 field(vec3 p) {
+  vec3 uvw = vec3(p.x / (2.0 * FIELD_R) + 0.5, p.z / (2.0 * FIELD_R) + 0.5, p.y / (2.0 * FIELD_H) + 0.5);
+  if (any(lessThan(uvw, vec3(0.0))) || any(greaterThan(uvw, vec3(1.0)))) return vec4(0.45, 1.0, 0.45, 0.44);
+  return texture(uField, uvw);
+}
+
+vec3 emissionAt(vec3 p, float big, float clump) {
   float r = length(p.xz);
   float h = p.y;
-  float th = atan(p.z, p.x);
+  float a = arms(atan(p.z, p.x), r, (big - 0.44) * 2.2);
 
-  float big = fbm3(p * 1.3 + 3.1);            // large-scale irregularity
-  float warp = (big - 0.44) * 2.2;
+  // stellar disk: thin and blue-white, brightest along the arms
+  float diskH = 0.010 + 0.022 * smoothstep(0.2, 1.1, r);
+  float disk = exp(-r / 0.42) * exp(-abs(h) / diskH);
+  disk *= mix(0.4, 1.0, a * a) * (0.4 + 1.2 * clump * clump);
+  disk *= (1.0 - smoothstep(0.95, 1.5, r)) * mix(0.25, 1.0, smoothstep(0.06, 0.4, r));
 
-  // stellar disk
-  float a = arms(th, r, warp);
-  float diskH = 0.013 + 0.028 * smoothstep(0.2, 1.1, r);
-  float disk = exp(-r / 0.40) * exp(-abs(h) / diskH);
-  float clump = fbm3(p * 7.0 + 7.0);
-  disk *= mix(0.35, 1.0, a * a) * (0.35 + 1.3 * clump * clump);
-  disk *= 1.0 - smoothstep(0.9, 1.45, r);
+  // bulge: hot core, cream bulge, and a soft glow rising off the plane
+  float rb = length(vec3(p.x, h / 0.78, p.z));
+  float core = exp(-rb / 0.045) * 3.0;
+  float bulge = exp(-rb / 0.16) * 2.2;
+  // the big cream glow sits mostly on the far side of the lane, as in the wallpaper
+  float glow = exp(-length(vec3(p.x, h / 0.34, p.z)) / 0.37) * 0.55 * mix(0.3, 1.0, smoothstep(-0.12, 0.1, h));
+  float halo = exp(-length(vec3(p.x, h / 0.35, p.z)) / 0.9) * 0.09;
 
-  // bulge: bright compact core plus a broad soft glow that rises off the plane
-  float rb = length(vec3(p.x, h / 0.6, p.z));
-  float core = exp(-rb / 0.045) * 2.6;
-  float bulge = exp(-rb / 0.13) * 1.5;
-  float glow = exp(-length(vec3(p.x, h / 0.7, p.z)) / 0.3) * 0.28;
-
-  // faint blue stellar halo
-  float halo = exp(-length(vec3(p.x, h / 0.38, p.z)) / 0.8) * 0.03;
-
-  vec3 warm = vec3(1.0, 0.80, 0.48);
-  vec3 cream = vec3(0.95, 0.92, 0.80);
-  vec3 blue = vec3(0.52, 0.68, 1.0);
-  vec3 diskCol = mix(cream, blue, smoothstep(0.1, 0.6, r));
-  vec3 emit = core * warm + bulge * mix(warm, cream, 0.6) + glow * mix(warm, cream, 0.7)
-            + disk * diskCol * (2.4 + 2.2 * smoothstep(0.25, 0.8, r)) + halo * vec3(0.42, 0.56, 0.85);
-
-  // dust: billowing clouds trailing the arms. Domain-warped fbm gives
-  // coherent cloud shapes instead of per-pixel grain.
-  float slab = abs(h - (big - 0.44) * 0.07);
-  if (slab > 0.14) return vec4(emit, 0.0);
-  float ad = arms(th, r, warp - 0.5);
-  vec3 w = vec3(fbm3(p * 1.7 + 1.3), fbm3(p * 1.7 + 4.7), fbm3(p * 1.7 + 9.1)) - 0.45;
-  float cloud = fbm5(p * 4.0 + w * 1.8);
-  float thick = 0.014 + 0.075 * smoothstep(0.38, 0.7, cloud);
-  float dust = exp(-slab / thick);
-  dust *= smoothstep(0.1, 0.3, r) * (1.0 - smoothstep(0.85, 1.35, r));
-  dust *= mix(0.05, 1.0, ad * ad) * smoothstep(0.5, 0.6, cloud);
-  return vec4(emit, dust);
+  vec3 warm = vec3(1.0, 0.74, 0.36);
+  vec3 cream = vec3(1.0, 0.91, 0.70);
+  vec3 blue = vec3(0.56, 0.73, 1.0);
+  vec3 diskCol = mix(cream, blue, smoothstep(0.08, 0.35, r));
+  return core * warm + bulge * mix(warm, cream, 0.5) + glow * mix(warm, cream, 0.45)
+       + disk * diskCol * (2.6 + 3.4 * smoothstep(0.25, 0.8, r)) + halo * vec3(0.32, 0.52, 0.95);
 }
 
 // interleaved gradient noise: even, static dither for the ray start
@@ -187,42 +218,54 @@ void main() {
   float disc = b * b - c;
   if (disc < 0.0) { outColor = vec4(0.0); return; }
   float sq = sqrt(disc);
-  float t0 = max(-b - sq, 0.0);
+  float t = max(-b - sq, 0.0);
   float t1 = -b + sq;
 
   float j = fract(ign(gl_FragCoord.xy) + uFrame * 0.618034);
-  float t = t0;
   vec3 col = vec3(0.0);
   float T = 1.0;
-  for (int i = 0; i < 400; i++) {
-    if (i >= uSteps || t > t1 || T < 0.015) break;
-    vec3 p = ro + rd * t;
-    // fine steps near the disk plane, coarse steps far from it
-    float dt = clamp(abs(p.y) * 0.4, 0.009, 0.08);
-    p += rd * dt * j;                       // jittered sample position inside the step
-    vec4 s = sampleGalaxy(p);
-    float r = length(p);
-    // dust is lit by the core: bright rims close in, dark blue-grey further out
-    // Henyey-Greenstein forward scattering of core light toward the camera:
-    // dust sitting in front of the bulge gets bright, silvery edges
-    float mu = dot(normalize(p), -rd);
-    float g = 0.55;
-    float hg = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * mu, 1.5) * 0.25;
-    vec3 lit = vec3(1.0, 0.93, 0.82) * 2.2 * hg / (1.0 + pow(r / 0.2, 2.0))
-             + vec3(0.40, 0.52, 0.70) * 0.6 * exp(-r / 0.6);
-    vec3 src = s.rgb + s.a * lit;
-    float sigma = s.a * 45.0;
+  for (int i = 0; i < 512; i++) {
+    if (i >= uSteps || t > t1 || T < 0.01) break;
+    vec3 pw = ro + rd * t;
+    // fine steps inside the dust slab, coarse steps far from the plane
+    float dt = clamp(abs(pw.y) * 0.4, 0.0065, 0.08);
+    pw += rd * dt * j;
+    vec3 p = pw;
+    p.xz = rot(uSpin) * p.xz;
+    vec4 f = field(p);
+    vec3 src = emissionAt(p, f.a, f.b);
+    float d = 0.0;
+    if (abs(p.y) < FIELD_H) {
+      // runtime detail breaks up the baked cloud edges
+      float detail = (n3(p * 23.0) - 0.5) + 0.5 * (n3(p * 51.0 + 0.3) - 0.5);
+      d = dustShape(p, f.a, f.r + detail * 0.1);
+    }
+    float sigma = d * 60.0;
+    if (d > 0.001) {
+      // Dust radiance: what a thick cloud looks like by itself. Lit faces that
+      // see the bulge are blue-white, shadowed ones a deep navy.
+      float r = length(p);
+      float mu = dot(normalize(p), -rd);
+      const float G = 0.6;                                 // forward scattering
+      float hg = (1.0 - G * G) / pow(1.0 + G * G - 2.0 * G * mu, 1.5) * 0.25;
+      vec3 key = vec3(0.82, 0.90, 1.0) * 3.2 * hg * f.g * f.g / (1.0 + pow(r / 0.32, 2.0));
+      vec3 ambient = vec3(0.09, 0.15, 0.25) * (0.45 + 0.55 * f.g) * exp(-r / 1.1);
+      src += sigma * (key + ambient);
+    }
     float trans = exp(-sigma * dt);
-    // energy-conserving integration of emission over the step
     vec3 contrib = sigma > 1e-4 ? src * (1.0 - trans) / sigma : src * dt;
     col += T * contrib;
     T *= trans;
     t += dt;
   }
 
-  col *= 1.8;
-  col = 1.0 - exp(-col);                      // soft filmic roll-off
-  col = pow(col, vec3(0.92));
+  // tone map on luminance so bright cream stays cream instead of going white
+  col *= 1.7;
+  float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  float mapped = 1.0 - exp(-lum * 1.1);
+  col = lum > 1e-5 ? col * (mapped / lum) : col;
+  col = mix(col, vec3(mapped), smoothstep(0.75, 1.0, mapped) * 0.6);   // highlights still roll off to white
+  col = pow(min(col, vec3(1.0)), vec3(1.05));
   outColor = vec4(col, 1.0 - T);
 }`;
 

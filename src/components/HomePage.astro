@@ -95,6 +95,7 @@ const links = [
         center: (aspect) => (aspect > 1.2 ? [0.32, 0.02] : [0.3, -0.42]),
         onReady: () => canvas.classList.add('is-ready'),
       });
+      (window as unknown as { galaxy?: unknown }).galaxy = galaxy;
     } catch (e) {
       console.warn('galaxy disabled', e);   // keep the static wallpaper
     }

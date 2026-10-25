@@ -1,8 +1,10 @@
-import { accumFrag, blitFrag, diskStarsVert, fullscreenVert, skyFrag, starsFrag, starsVert, volumeFrag } from './shaders';
+import { accumFrag, bakeFrag, blitFrag, diskStarsVert, fullscreenVert, skyFrag, starsFrag, starsVert, volumeFrag } from './shaders';
 
 export interface GalaxyOptions {
   /** Galaxy centre on screen, in NDC (-1..1). */
   center?: (aspect: number) => [number, number];
+  /** How much of galaxy space spans the screen width, by aspect ratio. */
+  frameWidth?: (aspect: number) => number;
   /** Called once the first frame is on screen. */
   onReady?: () => void;
 }
@@ -14,7 +16,7 @@ export interface GalaxyView {
   elevation: number;
 }
 
-const BASE: GalaxyView = { azimuth: 0.35, elevation: 0.15 };
+const BASE: GalaxyView = { azimuth: 0.35, elevation: 0.115 };
 const ROLL = -0.52;          // tilts the major axis from lower-left to upper-right
 const DIST = 3.0;
 const FOV_TAN = Math.tan((28 * Math.PI) / 180 / 2);
@@ -88,7 +90,7 @@ function starField(gl: WebGL2RenderingContext, count: number) {
     const a = rand() * Math.PI * 2;
     const s = Math.sqrt(1 - z * z);
     const m = Math.pow(rand(), 9);                    // most stars faint, a few bright
-    data.set([s * Math.cos(a), z, s * Math.sin(a), 0.75 + m * 2.2, 0.45 + m * 2.6 + rand() * 0.5, rand()], i * 6);
+    data.set([s * Math.cos(a), z, s * Math.sin(a), 0.8 + m * 2.6, 0.6 + m * 3.0 + rand() * 0.7, rand()], i * 6);
   }
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
@@ -111,7 +113,7 @@ function diskStars(gl: WebGL2RenderingContext, count: number) {
   let i = 0;
   while (i < count) {
     // exponential disk in r (gamma(2) sample), uniform angle, then thin out between arms
-    const r = -0.34 * Math.log((rand() + 1e-9) * (rand() + 1e-9));
+    const r = -0.28 * Math.log((rand() + 1e-9) * (rand() + 1e-9));
     if (r > 1.35 || r < 0.06) continue;
     const th = rand() * Math.PI * 2;
     const arm = 0.5 + 0.5 * Math.cos(2 * (th + Math.log(r + 0.04) * 3.4));
@@ -120,7 +122,7 @@ function diskStars(gl: WebGL2RenderingContext, count: number) {
     const m = Math.pow(rand(), 6);
     const warm = Math.max(0, 1 - r / 0.45) * 0.8 + rand() * 0.2;
     const fade = 1 - Math.min(1, Math.max(0, (r - 0.7) / 0.6));
-    data.set([r * Math.cos(th), h, r * Math.sin(th), 0.45 + m * 1.4, (0.08 + m * 0.9) * (0.35 + 0.65 * fade), warm], i * 6);
+    data.set([r * Math.cos(th), h, r * Math.sin(th), 0.45 + m * 1.1, (0.10 + m * 0.8) * (0.35 + 0.65 * fade) * Math.min(1, r / 0.18), warm], i * 6);
     i++;
   }
   const vao = gl.createVertexArray();
@@ -174,12 +176,13 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   const volume = compile(gl, fullscreenVert, volumeFrag);
   const blit = compile(gl, fullscreenVert, blitFrag);
   const accum = compile(gl, fullscreenVert, accumFrag);
+  const bake = compile(gl, fullscreenVert, bakeFrag);
   const noise = noiseTexture(gl);
-  const STAR_COUNT = 9000;
+  const STAR_COUNT = 14000;
   const starVao = starField(gl, STAR_COUNT);
   const disk = compile(gl, diskStarsVert, starsFrag);
-  const mobileCount = matchMedia('(pointer: coarse)').matches;
-  const DISK_COUNT = mobileCount ? 40000 : 90000;
+  const mobile = matchMedia('(pointer: coarse)').matches;
+  const DISK_COUNT = mobile ? 24000 : 60000;
   const diskVao = diskStars(gl, DISK_COUNT);
 
   // Volume targets: the current frame plus two history buffers that we
@@ -197,9 +200,38 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   let histIdx = 1;
   let fresh = true;
 
-  const mobile = matchMedia('(pointer: coarse)').matches;
-  let scale = mobile ? 0.6 : 0.6;   // volume pixels per CSS pixel            // volume resolution relative to the canvas
-  let steps = mobile ? 110 : 170;
+  // Baked dust field (see bakeFrag). Built a few layers per frame so the
+  // page never stalls; the volume pass waits until it's complete.
+  const FW = mobile ? 256 : 384, FL = 40, FIELD_H = 0.2;
+  const field = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_3D, field);
+  gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA8, FW, FW, FL, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);   // x, z, y
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  for (const w of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T, gl.TEXTURE_WRAP_R]) gl.texParameteri(gl.TEXTURE_3D, w, gl.CLAMP_TO_EDGE);
+  const bakeFbo = gl.createFramebuffer();
+  let baked = 0;
+  function bakeLayers(n: number) {
+    const g = gl!;
+    g.bindFramebuffer(g.FRAMEBUFFER, bakeFbo);
+    g.viewport(0, 0, FW, FW);
+    g.disable(g.BLEND);
+    g.useProgram(bake.prog);
+    g.activeTexture(g.TEXTURE0);
+    g.bindTexture(g.TEXTURE_3D, noise);
+    g.uniform1i(bake.u.uNoise, 0);
+    g.bindVertexArray(tri);
+    for (let k = 0; k < n && baked < FL; k++, baked++) {
+      // each layer is one height; its image axes are x and z
+      g.framebufferTextureLayer(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, field, 0, baked);
+      g.uniform1f(bake.u.uY, ((baked + 0.5) / FL * 2 - 1) * FIELD_H);
+      g.drawArrays(g.TRIANGLES, 0, 3);
+    }
+    g.bindFramebuffer(g.FRAMEBUFFER, null);
+  }
+
+  let scale = mobile ? 0.6 : 0.66;   // volume pixels per CSS pixel            // volume resolution relative to the canvas
+  let steps = mobile ? 160 : 220;
   let vw = 0, vh = 0;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
@@ -229,7 +261,8 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     const [sx, sy] = opts.center?.(aspect) ?? [0, 0];
     // frame the galaxy by width: nearly all of it on wide screens, the core and
     // inner arms crossing the screen diagonally on phones
-    const fovTan = Math.max(FOV_TAN * 0.6, (aspect > 1.2 ? 2.2 : 1.25) / (2 * DIST * aspect));
+    const width = opts.frameWidth?.(aspect) ?? (aspect > 1.2 ? 2.2 : 1.25);
+    const fovTan = Math.max(FOV_TAN * 0.6, width / (2 * DIST * aspect));
     const cam = cameraBasis(view);
     const g = gl!;
 
@@ -252,7 +285,10 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.uniform1f(volume.u.uTime, time);
     g.uniform1f(volume.u.uSpin, spin);
     g.uniform1i(volume.u.uSteps, steps);
-    g.uniform1f(volume.u.uOctaves, mobile ? 4 : 5);
+    g.activeTexture(g.TEXTURE1);
+    g.bindTexture(g.TEXTURE_3D, field);
+    g.uniform1i(volume.u.uField, 1);
+    g.activeTexture(g.TEXTURE0);
     g.uniform1f(volume.u.uFrame, frameNo++ % 4096);
     g.uniform2f(volume.u.uTexel, 1 / vw, 1 / vh);
     g.bindVertexArray(tri);
@@ -325,7 +361,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   const view = { ...BASE };
   const clampView = () => {
     target.azimuth = Math.max(BASE.azimuth - 0.6, Math.min(BASE.azimuth + 0.6, target.azimuth));
-    target.elevation = Math.max(0.08, Math.min(0.42, target.elevation));
+    target.elevation = Math.max(0.05, Math.min(0.36, target.elevation));
   };
 
   const onMouse = (e: PointerEvent) => {
@@ -400,12 +436,13 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     // accumulate harder when the camera is still, less while it moves
     const speed = Math.abs(target.azimuth - view.azimuth) + Math.abs(target.elevation - view.elevation);
     const blend = Math.min(0.35, 0.08 + speed * 3);
+    if (baked < FL) { bakeLayers(mobile ? 3 : 4); kick(); return; }
     render({ azimuth: view.azimuth + drift, elevation: view.elevation }, now / 1000, spin, blend);
     if (!ready) { ready = true; opts.onReady?.(); }
 
     // adaptive quality: keep frames under ~20 ms
     if (dt > 0.024) { slow++; fast = 0; } else if (dt < 0.012) { fast++; slow = 0; }
-    if (slow > 20 && scale > 0.28) { scale -= 0.06; steps = Math.max(70, steps - 15); slow = 0; }
+    if (slow > 20 && scale > 0.3) { scale -= 0.06; steps = Math.max(120, steps - 20); slow = 0; }
     if (fast > 120 && scale < 0.8) { scale += 0.04; fast = 0; }
 
     if (!reduced) kick();
@@ -428,6 +465,14 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
       removeEventListener('deviceorientation', onOrient);
       host.removeEventListener('touchend', askGyro);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
+    },
+    /** GPU cost of one frame in ms at the current quality (for tuning). */
+    bench(n = 20) {
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) render(view, i / 60, spin, 0.1);
+      gl.finish();
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+      return { ms: (performance.now() - t0) / n, scale, steps, w: vw, h: vh };
     },
     /** For screenshots and tuning. */
     setView(v: Partial<GalaxyView>) { Object.assign(target, v); Object.assign(view, v); },
