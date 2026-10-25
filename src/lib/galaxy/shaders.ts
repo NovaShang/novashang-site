@@ -46,45 +46,6 @@ void main() {
   vColor = mix(vec3(0.80, 0.87, 1.0), vec3(1.0, 0.93, 0.82), aProps.z);
 }`;
 
-export const diskStarsVert = /* glsl */ `#version 300 es
-in vec3 aDir;            // position in galaxy space
-in vec3 aProps;          // size px, brightness, colour 0..1 (0 blue, 1 warm)
-uniform vec3 uCamPos, uRight, uUp, uFwd;
-uniform float uTan, uAspect, uDpr, uSpin;
-uniform vec2 uShift;
-out float vBright;
-out vec3 vColor;
-out float vSize;
-void main() {
-  vec3 p = aDir;
-  float c = cos(-uSpin), s = sin(-uSpin);
-  p.xz = mat2(c, -s, s, c) * p.xz;
-  vec3 d = p - uCamPos;
-  vec3 v = vec3(dot(d, uRight), dot(d, uUp), dot(d, uFwd));
-  if (v.z <= 0.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
-  vec2 ndc = vec2(v.x / (v.z * uTan * uAspect), v.y / (v.z * uTan)) + uShift;
-  gl_Position = vec4(ndc, 0.0, 1.0);
-  vSize = aProps.x * uDpr;
-  gl_PointSize = vSize * 4.0;
-  vBright = aProps.y;
-  vColor = mix(vec3(0.70, 0.82, 1.0), vec3(1.0, 0.90, 0.72), aProps.z);
-}`;
-
-export const starsFrag = /* glsl */ `#version 300 es
-precision highp float;
-in float vBright;
-in vec3 vColor;
-in float vSize;
-out vec4 outColor;
-void main() {
-  vec2 c = gl_PointCoord * 2.0 - 1.0;
-  float r = length(c) * 4.0;            // in units of the star's size
-  float core = exp(-r * r * 2.2);
-  float halo = exp(-r * 2.2) * 0.12 * smoothstep(2.0, 5.0, vSize);
-  float a = (core + halo) * vBright;
-  outColor = vec4(vColor * a, 0.0);
-}`;
-
 // Shared by the bake pass and the ray marcher.
 const common = /* glsl */ `
 precision highp float;
@@ -118,15 +79,117 @@ float dustShape(vec3 p, float big, float cloud) {
   d *= smoothstep(0.1, 0.3, r) * exp(-r / 0.85) * 1.8;
   float ad = arms(atan(p.z, p.x), r, (big - 0.44) * 2.2 - 0.5);
   // denser and continuous inside, breaking into filaments further out
-  float cut = 0.43 + 0.09 * smoothstep(0.35, 1.2, r);
+  float cut = 0.455 + 0.08 * smoothstep(0.35, 1.2, r);
   d *= mix(0.2, 1.0, ad) * smoothstep(cut, cut + 0.04, cloud);
   return d;
+}
+
+// Baked field lookup (see bakeFrag); outside it there's no dust.
+uniform sampler3D uField;
+vec4 field(vec3 p) {
+  vec3 uvw = vec3(p.x / (2.0 * FIELD_R) + 0.5, p.z / (2.0 * FIELD_R) + 0.5, p.y / (2.0 * FIELD_H) + 0.5);
+  if (any(lessThan(uvw, vec3(0.0))) || any(greaterThan(uvw, vec3(1.0)))) return vec4(0.45, 1.0, 0.45, 0.44);
+  return texture(uField, uvw);
 }
 `;
 
 // Bakes the expensive noise into a 3D texture once, one layer per draw:
 //   r = cloud field (domain-warped fbm), g = transmittance toward the core,
 //   b = stellar clumping, a = large-scale irregularity
+// The galaxy's stars, generated entirely on the GPU from gl_VertexID: a
+// random position from the disk or bulge distribution, brightness shaped by
+// the same arms and clumping as the volume, and dimmed by the dust between
+// the star and the camera (a short march through the baked field).
+export const galaxyStarsVert = /* glsl */ `#version 300 es
+${common}
+uniform vec3 uCamPos, uRight, uUp, uFwd;
+uniform float uTan, uAspect, uDpr, uSpin, uCount;
+uniform vec2 uShift;
+out float vBright;
+out vec3 vColor;
+out float vSize;
+
+uint hashu(uint x) {
+  x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16;
+  return x;
+}
+float rnd(uint id, uint k) { return float(hashu(id * 0x9e3779b9u + k * 0x85ebca6bu) & 0xffffffu) / 16777216.0; }
+float gauss(uint id, uint k) {
+  return sqrt(-2.0 * log(rnd(id, k) + 1e-7)) * cos(6.2831853 * rnd(id, k + 1u));
+}
+
+void main() {
+  uint id = uint(gl_VertexID);
+  bool isBulge = float(gl_VertexID) < uCount * 0.2;
+  vec3 g;
+  if (isBulge) {
+    float rb = -0.075 * log((rnd(id, 1u) + 1e-7) * (rnd(id, 2u) + 1e-7) * (rnd(id, 3u) + 1e-7));
+    vec3 dir = normalize(vec3(gauss(id, 4u), gauss(id, 6u), gauss(id, 8u)) + 1e-5);
+    g = dir * rb * vec3(1.0, 0.7, 1.0);
+  } else {
+    float rr = -0.34 * log((rnd(id, 1u) + 1e-7) * (rnd(id, 2u) + 1e-7));
+    float th = 6.2831853 * rnd(id, 3u);
+    float hh = gauss(id, 4u) * (0.008 + 0.022 * smoothstep(0.2, 1.1, rr));
+    g = vec3(rr * cos(th), hh, rr * sin(th));
+  }
+  float r = length(g.xz);
+
+  float big = fbm3(g * 1.3 + 3.1);
+  float a = arms(atan(g.z, g.x), r, (big - 0.44) * 2.2);
+  float clump = fbm3(g * 7.0 + 7.0);
+  float m = pow(rnd(id, 10u), 7.0);                    // a few bright stars, many faint ones
+  float w = isBulge ? 1.0 : mix(0.12, 1.0, a * a) * (0.25 + 1.8 * clump * clump);
+  w *= 1.0 - smoothstep(1.0, 1.5, r);
+
+  // dust between the star and the camera, in galaxy space
+  vec3 cam = uCamPos;
+  cam.xz = rot(uSpin) * cam.xz;
+  vec3 toCam = cam - g;
+  float ty = abs(toCam.y) > 1e-4 ? (sign(toCam.y) * FIELD_H - g.y) / toCam.y : 1.0;   // where it leaves the slab
+  float seg = clamp(ty, 0.0, 1.0) * length(toCam);
+  vec3 dir = normalize(toCam);
+  float stepLen = min(seg, 1.2) / 7.0;
+  float od = 0.0;
+  for (int i = 0; i < 7; i++) {
+    vec3 q = g + dir * stepLen * (float(i) + 0.5);
+    vec4 f = field(q);
+    od += dustShape(q, f.a, f.r) * stepLen;
+  }
+  float trans = exp(-od * 60.0);
+
+  // back to world space and onto the screen
+  vec3 pw = g;
+  pw.xz = rot(-uSpin) * pw.xz;
+  vec3 d = pw - uCamPos;
+  vec3 v = vec3(dot(d, uRight), dot(d, uUp), dot(d, uFwd));
+  float bright = (0.32 + m * 3.6) * w * trans;
+  if (v.z <= 0.0 || bright < 0.01) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
+  vec2 ndc = vec2(v.x / (v.z * uTan * uAspect), v.y / (v.z * uTan)) + uShift;
+  gl_Position = vec4(ndc, 0.0, 1.0);
+  vSize = (0.55 + m * 1.6) * uDpr;
+  gl_PointSize = vSize * 3.0;
+  vBright = bright;
+  vec3 warm = vec3(1.0, 0.86, 0.62), white = vec3(0.95, 0.96, 1.0), blue = vec3(0.66, 0.79, 1.0);
+  vColor = isBulge ? mix(warm, white, rnd(id, 11u) * 0.4)
+                   : mix(mix(warm, white, smoothstep(0.05, 0.25, r)), blue, smoothstep(0.25, 0.7, r) * (0.6 + 0.4 * rnd(id, 11u)));
+}`;
+
+export const starsFrag = /* glsl */ `#version 300 es
+precision highp float;
+in float vBright;
+in vec3 vColor;
+in float vSize;
+out vec4 outColor;
+void main() {
+  vec2 c = gl_PointCoord * 2.0 - 1.0;
+  float r = length(c) * 4.0;            // in units of the star's size
+  float core = exp(-r * r * 2.2);
+  float halo = exp(-r * 2.2) * 0.12 * smoothstep(2.0, 5.0, vSize);
+  float a = (core + halo) * vBright;
+  outColor = vec4(vColor * a, 0.0);
+}`;
+
+
 export const bakeFrag = /* glsl */ `#version 300 es
 ${common}
 in vec2 vUv;
@@ -160,7 +223,6 @@ ${common}
 in vec2 vUv;
 out vec4 outColor;
 
-uniform sampler3D uField;
 uniform vec3 uCamPos, uRight, uUp, uFwd;
 uniform float uTan, uAspect;
 uniform vec2 uShift;
@@ -169,11 +231,6 @@ uniform int uSteps;
 uniform float uFrame;     // golden-ratio sequence for temporal jitter
 uniform vec2 uTexel;
 
-vec4 field(vec3 p) {
-  vec3 uvw = vec3(p.x / (2.0 * FIELD_R) + 0.5, p.z / (2.0 * FIELD_R) + 0.5, p.y / (2.0 * FIELD_H) + 0.5);
-  if (any(lessThan(uvw, vec3(0.0))) || any(greaterThan(uvw, vec3(1.0)))) return vec4(0.45, 1.0, 0.45, 0.44);
-  return texture(uField, uvw);
-}
 
 vec3 emissionAt(vec3 p, float big, float clump) {
   float r = length(p.xz);
@@ -228,7 +285,7 @@ void main() {
     if (i >= uSteps || t > t1 || T < 0.01) break;
     vec3 pw = ro + rd * t;
     // fine steps inside the dust slab, coarse steps far from the plane
-    float dt = clamp(abs(pw.y) * 0.4, 0.0065, 0.08);
+    float dt = clamp(abs(pw.y) * 0.4, 0.008, 0.08);
     pw += rd * dt * j;
     vec3 p = pw;
     p.xz = rot(uSpin) * p.xz;
@@ -249,7 +306,7 @@ void main() {
       const float G = 0.6;                                 // forward scattering
       float hg = (1.0 - G * G) / pow(1.0 + G * G - 2.0 * G * mu, 1.5) * 0.25;
       vec3 key = vec3(0.82, 0.90, 1.0) * 3.2 * hg * f.g * f.g / (1.0 + pow(r / 0.32, 2.0));
-      vec3 ambient = vec3(0.09, 0.15, 0.25) * (0.45 + 0.55 * f.g) * exp(-r / 1.1);
+      vec3 ambient = vec3(0.05, 0.09, 0.16) * (0.45 + 0.55 * f.g) * exp(-r / 1.1);
       src += sigma * (key + ambient);
     }
     float trans = exp(-sigma * dt);
@@ -260,7 +317,7 @@ void main() {
   }
 
   // tone map on luminance so bright cream stays cream instead of going white
-  col *= 1.7;
+  col *= 2.0;
   float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
   float mapped = 1.0 - exp(-lum * 1.1);
   col = lum > 1e-5 ? col * (mapped / lum) : col;

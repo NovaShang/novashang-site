@@ -1,4 +1,4 @@
-import { accumFrag, bakeFrag, blitFrag, diskStarsVert, fullscreenVert, skyFrag, starsFrag, starsVert, volumeFrag } from './shaders';
+import { accumFrag, bakeFrag, blitFrag, fullscreenVert, galaxyStarsVert, skyFrag, starsFrag, starsVert, volumeFrag } from './shaders';
 
 export interface GalaxyOptions {
   /** Galaxy centre on screen, in NDC (-1..1). */
@@ -105,39 +105,6 @@ function starField(gl: WebGL2RenderingContext, count: number) {
   return vao;
 }
 
-/** Stars inside the disk, sampled from the same exponential disk and arms as the volume. */
-function diskStars(gl: WebGL2RenderingContext, count: number) {
-  const rand = mulberry32(1234);
-  const gauss = () => Math.sqrt(-2 * Math.log(rand() + 1e-9)) * Math.cos(2 * Math.PI * rand());
-  const data = new Float32Array(count * 6);
-  let i = 0;
-  while (i < count) {
-    // exponential disk in r (gamma(2) sample), uniform angle, then thin out between arms
-    const r = -0.28 * Math.log((rand() + 1e-9) * (rand() + 1e-9));
-    if (r > 1.35 || r < 0.06) continue;
-    const th = rand() * Math.PI * 2;
-    const arm = 0.5 + 0.5 * Math.cos(2 * (th + Math.log(r + 0.04) * 3.4));
-    if (rand() > 0.25 + 0.75 * arm * arm) continue;
-    const h = gauss() * (0.010 + 0.02 * Math.min(1, r));
-    const m = Math.pow(rand(), 6);
-    const warm = Math.max(0, 1 - r / 0.45) * 0.8 + rand() * 0.2;
-    const fade = 1 - Math.min(1, Math.max(0, (r - 0.7) / 0.6));
-    data.set([r * Math.cos(th), h, r * Math.sin(th), 0.45 + m * 1.1, (0.10 + m * 0.8) * (0.35 + 0.65 * fade) * Math.min(1, r / 0.18), warm], i * 6);
-    i++;
-  }
-  const vao = gl.createVertexArray();
-  gl.bindVertexArray(vao);
-  const buf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-  gl.enableVertexAttribArray(0);
-  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
-  gl.enableVertexAttribArray(1);
-  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
-  gl.bindVertexArray(null);
-  return vao;
-}
-
 function cameraBasis(view: GalaxyView) {
   const { azimuth: az, elevation: el } = view;
   const pos = [DIST * Math.cos(el) * Math.sin(az), DIST * Math.sin(el), DIST * Math.cos(el) * Math.cos(az)];
@@ -180,10 +147,10 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   const noise = noiseTexture(gl);
   const STAR_COUNT = 14000;
   const starVao = starField(gl, STAR_COUNT);
-  const disk = compile(gl, diskStarsVert, starsFrag);
   const mobile = matchMedia('(pointer: coarse)').matches;
-  const DISK_COUNT = mobile ? 24000 : 60000;
-  const diskVao = diskStars(gl, DISK_COUNT);
+  const galaxyStars = compile(gl, galaxyStarsVert, starsFrag);
+  const GALAXY_STARS = mobile ? 200000 : 420000;
+  const emptyVao = gl.createVertexArray();      // stars come from gl_VertexID
 
   // Volume targets: the current frame plus two history buffers that we
   // ping-pong between, so per-frame jitter noise averages out over time.
@@ -230,7 +197,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.bindFramebuffer(g.FRAMEBUFFER, null);
   }
 
-  let scale = mobile ? 0.6 : 0.66;   // volume pixels per CSS pixel            // volume resolution relative to the canvas
+  let scale = 0.5;   // volume pixels per CSS pixel; the stars carry the fine detail
   let steps = mobile ? 160 : 220;
   let vw = 0, vh = 0;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -331,20 +298,6 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.bindVertexArray(starVao);
     g.drawArrays(g.POINTS, 0, STAR_COUNT);
 
-    // disk stars; the volume drawn next dims them where dust is in the way
-    g.useProgram(disk.prog);
-    g.uniform3fv(disk.u.uCamPos, cam.pos);
-    g.uniform3fv(disk.u.uRight, cam.right);
-    g.uniform3fv(disk.u.uUp, cam.up);
-    g.uniform3fv(disk.u.uFwd, cam.fwd);
-    g.uniform1f(disk.u.uTan, fovTan);
-    g.uniform1f(disk.u.uAspect, aspect);
-    g.uniform1f(disk.u.uDpr, dpr);
-    g.uniform1f(disk.u.uSpin, spin);
-    g.uniform2f(disk.u.uShift, sx, sy);
-    g.bindVertexArray(diskVao);
-    g.drawArrays(g.POINTS, 0, DISK_COUNT);
-
     // galaxy over everything: premultiplied colour, alpha = dust opacity
     g.blendFunc(g.ONE, g.ONE_MINUS_SRC_ALPHA);
     g.useProgram(blit.prog);
@@ -352,6 +305,29 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.uniform1i(blit.u.uTex, 0);
     g.bindVertexArray(tri);
     g.drawArrays(g.TRIANGLES, 0, 3);
+
+    // the galaxy's own stars on top, each already dimmed by the dust in front of it
+    g.blendFunc(g.ONE, g.ONE);
+    g.useProgram(galaxyStars.prog);
+    g.activeTexture(g.TEXTURE0);
+    g.bindTexture(g.TEXTURE_3D, noise);
+    g.uniform1i(galaxyStars.u.uNoise, 0);
+    g.activeTexture(g.TEXTURE1);
+    g.bindTexture(g.TEXTURE_3D, field);
+    g.uniform1i(galaxyStars.u.uField, 1);
+    g.activeTexture(g.TEXTURE0);
+    g.uniform3fv(galaxyStars.u.uCamPos, cam.pos);
+    g.uniform3fv(galaxyStars.u.uRight, cam.right);
+    g.uniform3fv(galaxyStars.u.uUp, cam.up);
+    g.uniform3fv(galaxyStars.u.uFwd, cam.fwd);
+    g.uniform1f(galaxyStars.u.uTan, fovTan);
+    g.uniform1f(galaxyStars.u.uAspect, aspect);
+    g.uniform1f(galaxyStars.u.uDpr, dpr);
+    g.uniform1f(galaxyStars.u.uSpin, spin);
+    g.uniform1f(galaxyStars.u.uCount, GALAXY_STARS);
+    g.uniform2f(galaxyStars.u.uShift, sx, sy);
+    g.bindVertexArray(emptyVao);
+    g.drawArrays(g.POINTS, 0, GALAXY_STARS);
     g.disable(g.BLEND);
   }
 
