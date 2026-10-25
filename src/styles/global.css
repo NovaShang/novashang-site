@@ -1,0 +1,156 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* All semantic tokens resolve through runtime CSS vars so they swap with theme */
+  --color-void-black: var(--c-bg);
+  --color-midnight-panel: var(--c-panel);
+  --color-text-white: var(--c-fg);
+  --color-text-grey: var(--c-muted);
+  --color-text-muted: var(--c-muted);
+  --color-neon-pink: #e74dae;
+
+  --color-background: var(--c-bg);
+  --color-panel: var(--c-panel);
+  --color-primary: #e74dae;
+}
+
+/* Light (default) */
+:root {
+  --c-bg: #fafafa;
+  --c-panel: #f1f1ec;
+  --c-fg: #0e0e0e;
+  --c-muted: #5a5a5a;
+  --c-line: rgba(0, 0, 0, 0.08);
+  --c-line-strong: rgba(0, 0, 0, 0.14);
+  --c-tint: rgba(0, 0, 0, 0.04);
+  --c-overlay: #ffffff;
+  --c-shadow: rgba(0, 0, 0, 0.06);
+  --c-shadow-strong: rgba(0, 0, 0, 0.10);
+}
+
+/* Dark */
+html.dark {
+  --c-bg: #070d12;
+  --c-panel: #1a2c3f;
+  --c-fg: #ffffff;
+  --c-muted: #b0b0b0;
+  --c-line: rgba(255, 255, 255, 0.05);
+  --c-line-strong: rgba(255, 255, 255, 0.10);
+  --c-tint: rgba(255, 255, 255, 0.04);
+  --c-overlay: #070d12;
+  --c-shadow: rgba(0, 0, 0, 0.5);
+  --c-shadow-strong: rgba(0, 0, 0, 0.5);
+}
+
+html {
+  background-color: var(--c-bg);
+  color: var(--c-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background-color: transparent;
+  color: var(--c-fg);
+  overflow-x: hidden;
+}
+
+::selection { background-color: #e74dae; color: #ffffff; }
+
+/* Glass utilities — both modes */
+.glass-panel {
+  background-color: color-mix(in oklab, var(--c-panel) 60%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--c-line-strong);
+}
+.glass-nav {
+  background: color-mix(in oklab, var(--c-panel) 40%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--c-line);
+}
+.glass-pill {
+  background: var(--c-tint);
+  border: 1px solid var(--c-line-strong);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Atmospheric bg image — hidden in light, shown in dark */
+.bg-photo { opacity: 0; }
+html.dark .bg-photo { opacity: 1; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--c-bg); }
+::-webkit-scrollbar-thumb { background: var(--c-panel); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #e74dae; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeInUp 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+.prose-nova {
+  --tw-prose-body: var(--c-fg);
+  --tw-prose-headings: var(--c-fg);
+  --tw-prose-links: var(--c-fg);
+  --tw-prose-bold: var(--c-fg);
+  --tw-prose-quotes: var(--c-fg);
+  --tw-prose-code: var(--c-fg);
+  --tw-prose-bullets: var(--c-muted);
+  --tw-prose-hr: var(--c-line-strong);
+  --tw-prose-th-borders: var(--c-line-strong);
+  --tw-prose-td-borders: var(--c-line);
+  font-size: 17px;
+  line-height: 1.7;
+}
+.prose-nova a {
+  color: var(--c-fg);
+  text-decoration: underline;
+  text-decoration-color: var(--c-line-strong);
+  text-underline-offset: 4px;
+  transition: color 200ms ease, text-decoration-color 200ms ease;
+}
+.prose-nova a:hover { color: #e74dae; text-decoration-color: #e74dae; }
+.prose-nova h2, .prose-nova h3 { letter-spacing: -0.01em; font-weight: 800; }
+.prose-nova h2 { margin-top: 2.2em; }
+.prose-nova code {
+  font-size: 0.9em;
+  padding: 0.12em 0.32em;
+  background: var(--c-tint);
+  border-radius: 4px;
+}
+.prose-nova pre { border: 1px solid var(--c-line); border-radius: 8px; }
+.prose-nova pre code { background: transparent; padding: 0; }
+.prose-nova blockquote { border-left: 2px solid #e74dae; font-style: italic; }
+
+/* Shiki dual-theme via CSS variables */
+html:not(.dark) .astro-code,
+html:not(.dark) .astro-code span {
+  background-color: var(--shiki-light-bg) !important;
+  color: var(--shiki-light) !important;
+}
+html.dark .astro-code,
+html.dark .astro-code span {
+  background-color: var(--shiki-dark-bg) !important;
+  color: var(--shiki-dark) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}

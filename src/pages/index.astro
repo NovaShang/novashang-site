@@ -1,0 +1,39 @@
+---
+// Root: detect Accept-Language client-side and redirect.
+// Static page; works on Cloudflare Pages without server runtime.
+const ZH = 'https://novashang.com/zh/';
+const EN = 'https://novashang.com/en/';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Shang Gao</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate" hreflang="zh-CN" href="/zh/" />
+    <link rel="alternate" hreflang="en" href="/en/" />
+    <link rel="alternate" hreflang="x-default" href="/zh/" />
+    <meta http-equiv="refresh" content="0; url=/zh/" />
+    <script is:inline>
+      (function () {
+        try {
+          var langs = (navigator.languages || [navigator.language || 'zh']).map(function (l) {
+            return l.toLowerCase();
+          });
+          var prefersZh = langs.some(function (l) {
+            return l.startsWith('zh');
+          });
+          location.replace(prefersZh ? '/zh/' : '/en/');
+        } catch (e) {
+          location.replace('/zh/');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <p style="font-family: system-ui; padding: 2rem;">
+      Redirecting… <a href="/zh/">中文</a> · <a href="/en/">English</a>
+    </p>
+  </body>
+</html>

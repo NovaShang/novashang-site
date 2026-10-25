@@ -1,0 +1,61 @@
+---
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+---
+<button
+  type="button"
+  data-theme-toggle
+  aria-label={t('theme.toggle')}
+  title={t('theme.toggle')}
+  class="inline-flex h-8 w-8 items-center justify-center text-text-muted hover:text-neon-pink transition-colors"
+>
+  <svg data-theme-icon="light" class="h-4 w-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/></svg>
+  <svg data-theme-icon="dark" class="h-4 w-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+  <svg data-theme-icon="system" class="h-4 w-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+</button>
+
+<script>
+  type Mode = 'light' | 'dark' | 'system';
+  const KEY = 'theme';
+  const order: Mode[] = ['system', 'light', 'dark'];
+
+  function getStored(): Mode {
+    const v = localStorage.getItem(KEY);
+    return v === 'light' || v === 'dark' || v === 'system' ? v : 'system';
+  }
+  function apply(mode: Mode) {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = mode === 'dark' || (mode === 'system' && prefersDark);
+    document.documentElement.classList.toggle('dark', isDark);
+  }
+  function refreshIcons() {
+    const mode = getStored();
+    document.querySelectorAll<HTMLElement>('[data-theme-icon]').forEach((el) => {
+      el.classList.toggle('hidden', el.dataset.themeIcon !== mode);
+    });
+  }
+  function init() {
+    refreshIcons();
+    document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]').forEach((btn) => {
+      if (btn.dataset.themeBound === '1') return;
+      btn.dataset.themeBound = '1';
+      btn.addEventListener('click', () => {
+        const cur = getStored();
+        const next = order[(order.indexOf(cur) + 1) % order.length] as Mode;
+        localStorage.setItem(KEY, next);
+        apply(next);
+        refreshIcons();
+      });
+    });
+  }
+
+  if (!(window as unknown as { __novaThemeMqlBound?: boolean }).__novaThemeMqlBound) {
+    (window as unknown as { __novaThemeMqlBound?: boolean }).__novaThemeMqlBound = true;
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (getStored() === 'system') apply('system');
+    });
+  }
+  document.addEventListener('astro:page-load', init);
+  if (document.readyState !== 'loading') init();
+</script>

@@ -1,0 +1,27 @@
+---
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+<div
+  class:list={[
+    "relative flex items-center justify-center w-12 h-12 bg-neon-pink rounded-lg -rotate-[15deg] shadow-md shadow-neon-pink/30 dark:shadow-lg dark:shadow-neon-pink/20",
+    className,
+  ]}
+>
+  <div class="rotate-[15deg] text-white">
+    <svg width="24" height="26" viewBox="0 0 30 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g clip-path="url(#brand-logo-clip)">
+        <path d="M18.5282 0V18.441L11.3612 11.3286L9.20972 12.2401V30.1502L11.0737 32V13.6578L18.4017 20.9297L20.3921 20.0863V1.84979L18.5282 0Z" fill="currentColor" />
+        <path d="M5.06732 11.0215L0 16.0485L5.06732 21.0773V19.4429L1.6474 16.0485L5.06732 12.6555V11.0215Z" fill="currentColor" />
+        <path d="M24.5682 11.055V12.6903L27.9526 16.0503L24.5682 19.409V21.0439L29.6 16.0485L24.5682 11.055Z" fill="currentColor" />
+      </g>
+      <defs>
+        <clipPath id="brand-logo-clip">
+          <rect width="29.6" height="32" fill="white" />
+        </clipPath>
+      </defs>
+    </svg>
+  </div>
+</div>

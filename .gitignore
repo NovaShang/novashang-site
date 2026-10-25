@@ -1,0 +1,22 @@
+# build
+dist/
+.astro/
+
+# deps
+node_modules/
+
+# env
+.env
+.env.production
+.dev.vars
+
+# logs
+npm-debug.log*
+
+# editors
+.vscode/
+.idea/
+.DS_Store
+
+# wrangler
+.wrangler/

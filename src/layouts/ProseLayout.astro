@@ -1,0 +1,49 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+
+interface Props {
+  title: string;
+  description?: string;
+  pubDate?: Date;
+  updatedDate?: Date;
+  tags?: string[];
+}
+
+const { title, description, pubDate, updatedDate, tags = [] } = Astro.props;
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const dateLocale = lang === 'zh' ? 'zh-CN' : 'en-US';
+const fmt = (d: Date) => d.toLocaleDateString(dateLocale, { year: 'numeric', month: 'short', day: 'numeric' });
+---
+<BaseLayout title={title} description={description}>
+  <article class="max-w-3xl mx-auto px-4 pt-32 pb-24 w-full relative z-10 animate-in">
+    <header class="mb-12">
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter text-text-white mb-6 leading-tight">
+        {title}
+      </h1>
+      {description && (
+        <p class="text-xl text-text-muted font-light tracking-wide mb-6">{description}</p>
+      )}
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-text-muted uppercase tracking-widest font-semibold">
+        {pubDate && (
+          <span><span class="opacity-50">{t('posts.published')}</span> · <time datetime={pubDate.toISOString()}>{fmt(pubDate)}</time></span>
+        )}
+        {updatedDate && (
+          <span><span class="opacity-50">{t('posts.updated')}</span> · <time datetime={updatedDate.toISOString()}>{fmt(updatedDate)}</time></span>
+        )}
+        {tags.length > 0 && (
+          <span class="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span class="bg-midnight-panel border border-[var(--c-line-strong)] px-2 py-0.5 rounded">{tag}</span>
+            ))}
+          </span>
+        )}
+      </div>
+    </header>
+    <div class="prose prose-nova max-w-none">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>

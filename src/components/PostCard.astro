@@ -1,0 +1,39 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  post: CollectionEntry<'posts'>;
+  lang: 'zh' | 'en';
+}
+const { post, lang } = Astro.props;
+const { title, description, pubDate, tags } = post.data;
+const cleanSlug = post.id.split('/').pop();
+const dateLocale = lang === 'zh' ? 'zh-CN' : 'en-US';
+const category = tags[0] ?? (lang === 'zh' ? '随笔' : 'NOTE');
+---
+<a href={`/${lang}/posts/${cleanSlug}`} class="group block h-full">
+  <article class="bg-midnight-panel rounded-xl overflow-hidden shadow-sm dark:shadow-lg hover:shadow-neon-pink/20 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col border border-[var(--c-line)]">
+    <div class="h-40 overflow-hidden relative bg-void-black/50">
+      <div class="absolute inset-0 flex items-center justify-center">
+        {/* Decorative gradient block as image-fallback */}
+        <div class="w-full h-full" style="background: radial-gradient(circle at 30% 30%, rgba(231,77,174,0.22), transparent 60%), linear-gradient(135deg, var(--c-panel) 0%, var(--c-bg) 100%);"></div>
+      </div>
+      <div class="absolute top-4 left-4 z-10">
+        <span class="bg-neon-pink/90 text-white text-xs font-bold px-2 py-1 rounded shadow-md backdrop-blur-sm uppercase tracking-wider">
+          {category}
+        </span>
+      </div>
+    </div>
+    <div class="p-6 flex flex-col flex-grow">
+      <div class="flex items-center text-xs text-text-muted mb-3 gap-2">
+        <time datetime={pubDate.toISOString()}>
+          {pubDate.toLocaleDateString(dateLocale, { year: 'numeric', month: 'short', day: 'numeric' })}
+        </time>
+      </div>
+      <h3 class="text-xl font-bold mb-2 text-text-white group-hover:text-neon-pink transition-colors line-clamp-2">{title}</h3>
+      {description && (
+        <p class="text-text-grey text-sm line-clamp-3 mb-4 flex-grow">{description}</p>
+      )}
+    </div>
+  </article>
+</a>
