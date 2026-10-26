@@ -1,0 +1,61 @@
+# One push to master publishes both sites from the same commit:
+#   global  novashang.com  ->  Cloudflare Pages (project nova-site)
+#   cn      gaoshang.me    ->  Aliyun ESA Pages (no sign-in, ICP in the footer,
+#                              post media copied in from R2)
+#
+# Repository secrets:
+#   CLOUDFLARE_API_TOKEN    token with "Cloudflare Pages: Edit"
+#   CLOUDFLARE_ACCOUNT_ID
+#   ESA_ACCESS_KEY_ID       RAM user with AliyunESAFullAccess
+#   ESA_ACCESS_KEY_SECRET
+# Repository variables:
+#   PUBLIC_ICP              ICP licence number shown on the cn site
+#   ESA_PROJECT             ESA Pages project name
+
+name: deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  global:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: >
+          npx wrangler pages deploy dist --project-name nova-site --branch main
+          --commit-hash "$GITHUB_SHA" --commit-message "$(git log -1 --format=%s)"
+
+  cn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Build (cn) and copy media in from R2
+        env:
+          PUBLIC_ICP: ${{ vars.PUBLIC_ICP }}
+        run: npm run build:cn
+      - name: Deploy to ESA Pages
+        env:
+          ESA_ACCESS_KEY_ID: ${{ secrets.ESA_ACCESS_KEY_ID }}
+          ESA_ACCESS_KEY_SECRET: ${{ secrets.ESA_ACCESS_KEY_SECRET }}
+        run: |
+          npm i -g esa-cli@latest
+          esa-cli login
+          esa-cli deploy --name "${{ vars.ESA_PROJECT }}" --assets ./dist-cn

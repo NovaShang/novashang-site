@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "build:cn": "PUBLIC_VARIANT=cn astro build",
+    "build:cn": "PUBLIC_VARIANT=cn astro build && node scripts/fetch-media.mjs dist-cn",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "media:push": "node scripts/push-media.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.0.0",
