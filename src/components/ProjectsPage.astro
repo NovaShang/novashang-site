@@ -13,23 +13,13 @@ const t = useTranslations(lang);
 
 const projects = (await getCollection('projects', ({ data }) => data.lang === lang))
   .sort((a, b) => a.data.order - b.data.order);
-const groups = (['building', 'tools', 'fun'] as const).map((key) => ({
-  key,
-  title: t(`projects.group.${key}`),
-  items: projects.filter((p) => p.data.group === key),
-}));
 ---
 <BaseLayout title={t('projects.title')} shot="projects">
   <div class="pt-16 md:pt-24">
     <Section label={t('projects.title')} note={t('projects.subtitle')} title>
-      {groups.map((g, i) => (
-        <div class:list={[i > 0 && 'mt-14']}>
-          <h2 class="pt-6 pb-4 text-[13px] text-muted">{g.title}</h2>
-          <div class="grid gap-4 sm:grid-cols-2">
-            {g.items.map((project) => <ProjectCard project={project} showCover />)}
-          </div>
-        </div>
-      ))}
+      <div class="pt-6 grid gap-4 sm:grid-cols-2">
+        {projects.map((project) => <ProjectCard project={project} showCover />)}
+      </div>
     </Section>
   </div>
 </BaseLayout>

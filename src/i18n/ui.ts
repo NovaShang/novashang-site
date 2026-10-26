@@ -35,9 +35,6 @@ export const ui = {
 
     'projects.title': '项目',
     'projects.subtitle': '做过的、还在做的东西。都链到项目自己的网站或代码仓库。',
-    'projects.group.building': '建筑与工程',
-    'projects.group.tools': 'Agent 与效率工具',
-    'projects.group.fun': '做着玩的',
 
     'posts.title': '文章',
     'posts.subtitle': '写 BIM、AI Agent 和工程实践。',
@@ -71,9 +68,6 @@ export const ui = {
 
     'projects.title': 'Projects',
     'projects.subtitle': 'Things I have built or am still building. Each links to its own site or repo.',
-    'projects.group.building': 'Buildings & engineering',
-    'projects.group.tools': 'Agents & everyday tools',
-    'projects.group.fun': 'For fun',
 
     'posts.title': 'Writing',
     'posts.subtitle': 'On BIM, AI agents and engineering practice.',

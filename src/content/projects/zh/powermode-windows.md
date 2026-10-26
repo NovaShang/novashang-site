@@ -5,7 +5,6 @@ url: https://github.com/NovaShang/PowerModeWindows
 repo: https://github.com/NovaShang/PowerModeWindows
 tags: ["Windows", "C#", "WPF"]
 lang: zh
-group: fun
 featured: false
 order: 12
 icon: "/media/projects/powermode-windows/icon.png"

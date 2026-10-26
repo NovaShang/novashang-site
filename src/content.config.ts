@@ -28,7 +28,6 @@ const projects = defineCollection({
     cover: z.string().optional(),
     tags: z.array(z.string()).default([]),
     lang: z.enum(['zh', 'en']),
-    group: z.enum(['building', 'tools', 'fun']),
     featured: z.boolean().default(false),
     order: z.number().default(0),
   }),
