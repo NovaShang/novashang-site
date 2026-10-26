@@ -7,4 +7,5 @@ lang: zh
 featured: false
 order: 11
 cover: "/media/projects/warloom/cover.png"
+icon: "/media/projects/warloom/icon.png"
 ---

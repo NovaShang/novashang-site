@@ -8,4 +8,5 @@ lang: en
 featured: false
 order: 8
 cover: "/media/projects/webulator/cover.png"
+icon: "/media/projects/webulator/icon.png"
 ---
