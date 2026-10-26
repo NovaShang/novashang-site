@@ -19,6 +19,11 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      skip_cn_media_check:
+        description: Deploy the cn site even if OSS is missing media (for first-time setup)
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy
@@ -53,6 +58,7 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - name: Check every post image is in OSS
+        if: ${{ !inputs.skip_cn_media_check }}
         run: npm run media:check:cn
       - name: Build (cn)
         env:
