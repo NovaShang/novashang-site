@@ -6,8 +6,10 @@
 //
 // This DOM tile does the travelling between them. On the landing page it sits
 // exactly on top of the scene's tile (whose screen position the renderer
-// publishes in brandTarget) and takes over as you scroll: it spins a quarter
-// turn, shrinks and docks while the nav title fades in. On a page change it is
+// publishes in brandTarget) and takes over once you start scrolling: it
+// spins a quarter turn, shrinks and docks while the nav title fades in. The
+// dock is a timed animation triggered by scrolling past a small threshold,
+// not tied to the scroll distance, so a quick flick still shows all of it. On a page change it is
 // persisted by the view-transition router and flies to wherever the new page
 // wants it. While it's back on the scene tile it hides and the scene draws it.
 
@@ -26,16 +28,21 @@ interface Pose {
 
 const TILE = 104;          // base size of the tile element
 const MARK_W = 30, MARK_H = 32;
-const DOCK_SCROLL = 0.5;   // fraction of the screen height scrolled while the tile rises from the scene to the nav
+const DOCK_AT = 40;        // scrolled px that send the tile to the nav
+const UNDOCK_AT = 12;      // and back to the scene (a gap, so it doesn't flicker)
+const DOCK_MS = 650;
 const FLIGHT_MS = 900;
 
 function cornerPose(): Pose {
   const wide = matchMedia('(min-width: 768px)').matches;
   // Centre and size of the corner tab, and where the upright mark sits in the
-  // part of it that's on screen (matches the 2024 site).
-  return wide
+  // part of it that's on screen (matches the 2024 site), below any notch.
+  const nav = document.querySelector<HTMLElement>('[data-nav]');
+  const top = nav ? parseFloat(getComputedStyle(nav).paddingTop) || 0 : 0;
+  const p = wide
     ? { x: 10, y: 12, size: 104, angle: -15, radius: 14, mx: 38.6, my: 26.1, mscale: 1 }
     : { x: 6, y: 8, size: 84, angle: -15, radius: 14, mx: 27.5, my: 18.8, mscale: 0.8667 };
+  return { ...p, y: p.y + top, my: p.my + top };
 }
 
 function scenePose(t: ScreenTile): Pose {
@@ -55,6 +62,9 @@ let shown: Pose | null = null;
 let flight: { from: Pose; start: number } | null = null;
 let raf = 0;
 let lastKey = '';
+let dockGoal = 0;          // 0 in the scene, 1 in the nav
+let dockT = 0;             // where the timed dock animation is, 0..1
+let lastFrame = 0;
 
 const onLanding = () => document.body.dataset.shot === 'home';
 
@@ -62,7 +72,7 @@ function targetPose(): { pose: Pose; docked: number } {
   const corner = cornerPose();
   const scene = onLanding() ? brandTarget.scene : null;
   if (!scene) return { pose: corner, docked: 1 };
-  const p = smooth(Math.min(1, Math.max(0, window.scrollY / (innerHeight * DOCK_SCROLL))));
+  const p = easeInOut(dockT);
   return { pose: mix(scenePose(scene), corner, p), docked: p };
 }
 
@@ -93,6 +103,12 @@ function apply(pose: Pose, docked: number, inScene: boolean) {
 
 function frame(now: number) {
   raf = 0;
+  const dt = lastFrame ? Math.min(100, now - lastFrame) : 16;
+  lastFrame = now;
+  if (scrollY > DOCK_AT) dockGoal = 1;
+  else if (scrollY < UNDOCK_AT) dockGoal = 0;
+  const step = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : dt / DOCK_MS;
+  dockT = dockGoal > dockT ? Math.min(dockGoal, dockT + step) : Math.max(dockGoal, dockT - step);
   const { pose, docked } = targetPose();
   if (flight) {
     const t = Math.min(1, (now - flight.start) / FLIGHT_MS);
@@ -122,6 +138,9 @@ export function initBrand() {
   document.addEventListener('astro:page-load', () => {
     // fly from the last pose on the previous page, if there was one
     if (shown && !reduced) flight = { from: shown, start: performance.now() };
+    // arriving on the landing page partway down: start docked
+    dockGoal = dockT = scrollY > DOCK_AT || !onLanding() ? 1 : 0;
+    if (reduced) dockT = dockGoal;
     lastKey = '';   // the nav is new on every page, so restyle it
     kick();
   });

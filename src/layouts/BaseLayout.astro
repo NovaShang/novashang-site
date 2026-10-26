@@ -29,7 +29,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://novashang.c
 <html lang={lang === 'zh' ? 'zh-CN' : 'en'}>
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <title>{fullTitle}</title>
@@ -42,7 +42,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://novashang.c
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="alternate" hreflang="zh-CN" href={new URL(`/zh${Astro.url.pathname.replace(/^\/(zh|en)/, '')}`, Astro.site ?? 'https://novashang.com').toString()} />
     <link rel="alternate" hreflang="en" href={new URL(`/en${Astro.url.pathname.replace(/^\/(zh|en)/, '')}`, Astro.site ?? 'https://novashang.com').toString()} />
-    <meta name="theme-color" content="#1a2c3f" />
 
 
     <ClientRouter />

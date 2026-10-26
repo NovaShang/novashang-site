@@ -63,9 +63,15 @@
 </script>
 
 <style>
+  /* Covers the whole screen on iPhone: under the status bar and notch, and
+     down to the large viewport height so it stays behind Safari's toolbars
+     as they collapse and expand. */
   .galaxy-bg {
     position: fixed;
-    inset: 0;
+    left: 0;
+    right: 0;
+    top: calc(-1 * env(safe-area-inset-top, 0px));
+    height: calc(100lvh + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
     z-index: -10;
     background: #070d12;
     pointer-events: none;

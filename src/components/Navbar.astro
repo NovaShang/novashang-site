@@ -17,7 +17,7 @@ const isActive = (match: string) => path.startsWith(`/${lang}/${match}`);
 const targetLang = lang === 'zh' ? 'en' : 'zh';
 const switchUrl = switchLangPath(path, lang, targetLang);
 ---
-<header data-nav class="fixed top-0 inset-x-0 z-50 h-13 md:h-14 text-fg">
+<header data-nav class="fixed top-0 inset-x-0 z-50 h-13 md:h-14 text-fg box-content pt-[env(safe-area-inset-top)]">
   {/* the 2024 bar; on the landing page it only fills in once the tile docks */}
   <div class="nav-bg absolute inset-0 bg-nav" style="box-shadow: var(--c-nav-shadow); opacity: var(--nav-solid, 1)"></div>
   <div class="relative h-full flex items-center justify-between pl-[72px] md:pl-[92px] pr-3 md:pr-6">
@@ -50,7 +50,7 @@ const switchUrl = switchLangPath(path, lang, targetLang);
     </nav>
   </div>
 </header>
-<div class="nav-spacer h-13 md:h-14" aria-hidden="true"></div>
+<div class="nav-spacer h-13 md:h-14 box-content pt-[env(safe-area-inset-top)]" aria-hidden="true"></div>
 
 <style is:global>
   body[data-shot='home'] [data-nav] { --nav-solid: 0; }

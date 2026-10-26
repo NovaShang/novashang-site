@@ -8,7 +8,7 @@ const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 const year = new Date().getFullYear();
 ---
-<footer class="mt-32">
+<footer class="mt-32 pb-[env(safe-area-inset-bottom)]">
   <div class="max-w-[1120px] mx-auto px-5 md:px-8 py-10 flex flex-col md:flex-row md:items-center justify-between gap-4 text-[13px] text-muted">
     <p>
       © {year} {t('home.hero.name')}
