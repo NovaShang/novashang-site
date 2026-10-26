@@ -103,8 +103,10 @@ function starField(gl: WebGL2RenderingContext, count: number) {
   return vao;
 }
 
-/** The magenta tile with its <N> mark, drawn once into a texture. */
-function tileTexture(gl: WebGL2RenderingContext) {
+/** The magenta tile with its <N> mark, drawn once into a texture. The tile
+ *  itself is tilted in the scene; the mark is drawn counter-rotated by the
+ *  same angle so it stays upright, as in the avatar. */
+function tileTexture(gl: WebGL2RenderingContext, tilt: number) {
   const N = 512, pad = 6;                 // transparent rim keeps the edges smooth
   const c = document.createElement('canvas');
   c.width = c.height = N;
@@ -115,7 +117,9 @@ function tileTexture(gl: WebGL2RenderingContext) {
   g.roundRect(pad, pad, N - 2 * pad, N - 2 * pad, (N - 2 * pad) * (14 / 104));
   g.fill();
   const k = (N * 0.46) / 32;              // mark is ~46% of the tile, like the avatar
-  g.translate(N / 2 - 14.8 * k, N / 2 - 16 * k);
+  g.translate(N / 2, N / 2);
+  g.rotate(tilt);
+  g.translate(-14.8 * k, -16 * k);
   g.scale(k, k);
   g.fillStyle = '#fff';
   for (const d of [
@@ -191,7 +195,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   // turns to face the camera, but slowly, so camera moves show it's a real
   // object in the scene. Tilted like the avatar.
   const tileProg = compile(gl, tileVert, tileFrag);
-  const tileTex = tileTexture(gl);
+
   const tileVao = gl.createVertexArray();
   const tileBuf = gl.createBuffer();
   gl.bindVertexArray(tileVao);
@@ -203,6 +207,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
   gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 12);
   gl.bindVertexArray(null);
   const TILE_TILT = (10 * Math.PI) / 180;   // top edge rising to the right
+  const tileTex = tileTexture(gl, TILE_TILT);
   // Pinned to the core so camera moves and parallax never slide it onto an arm.
   // For hiding stars it counts as this far in front, so the bulge stays
   // behind it and only a few disk stars pass over.
