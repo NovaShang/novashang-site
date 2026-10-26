@@ -45,6 +45,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://novashang.c
 
 
     <ClientRouter />
+    <script is:inline>
+      // remember an explicit language choice so the root page sends them back to it
+      document.addEventListener('click', function (e) {
+        var a = e.target.closest && e.target.closest('[data-lang-switch]');
+        if (a) try { localStorage.setItem('lang', a.getAttribute('data-lang-switch')); } catch (err) {}
+      }, true);
+    </script>
   </head>
   <body class="min-h-screen flex flex-col font-sans" data-shot={shot}>
     <GalaxyBackground />

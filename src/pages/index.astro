@@ -1,37 +1,40 @@
 ---
-// Root: detect Accept-Language client-side and redirect.
-// Static page; works on Cloudflare Pages without server runtime.
+// Root: send visitors to /zh/ or /en/. Static, so it decides in the browser:
+//   1. the language they last picked with the EN / 中文 switch, if any
+//   2. otherwise their browser's first-choice language (only the first one:
+//      an English phone that also lists Chinese should still get English)
+//   3. otherwise this build's default (English worldwide, Chinese for the cn build)
+import { isCn } from '../lib/variant';
+const fallback = isCn ? 'zh' : 'en';
 ---
 <!doctype html>
-<html lang="en">
+<html lang={fallback === 'zh' ? 'zh-CN' : 'en'}>
   <head>
     <meta charset="UTF-8" />
-    <title>Shang Gao</title>
+    <title>{isCn ? '高尚' : 'Shang Gao'}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate" hreflang="zh-CN" href="/zh/" />
     <link rel="alternate" hreflang="en" href="/en/" />
-    <link rel="alternate" hreflang="x-default" href="/zh/" />
-    <meta http-equiv="refresh" content="0; url=/zh/" />
-    <script is:inline>
+    <link rel="alternate" hreflang="x-default" href={`/${fallback}/`} />
+    <noscript><meta http-equiv="refresh" content={`0; url=/${fallback}/`} /></noscript>
+    <script is:inline define:vars={{ fallback }}>
       (function () {
+        var lang = fallback;
         try {
-          var langs = (navigator.languages || [navigator.language || 'zh']).map(function (l) {
-            return l.toLowerCase();
-          });
-          var prefersZh = langs.some(function (l) {
-            return l.startsWith('zh');
-          });
-          location.replace(prefersZh ? '/zh/' : '/en/');
-        } catch (e) {
-          location.replace('/zh/');
-        }
+          var saved = localStorage.getItem('lang');
+          if (saved === 'zh' || saved === 'en') {
+            lang = saved;
+          } else {
+            var first = ((navigator.languages && navigator.languages[0]) || navigator.language || '').toLowerCase();
+            if (first) lang = first.indexOf('zh') === 0 ? 'zh' : 'en';
+          }
+        } catch (e) {}
+        location.replace('/' + lang + '/' + location.search + location.hash);
       })();
     </script>
   </head>
-  <body>
-    <p style="font-family: system-ui; padding: 2rem;">
-      Redirecting… <a href="/zh/">中文</a> · <a href="/en/">English</a>
-    </p>
+  <body style="background:#070d12;color:#b4bec8;font-family:system-ui;padding:2rem">
+    <a href="/en/" style="color:inherit">English</a> · <a href="/zh/" style="color:inherit">中文</a>
   </body>
 </html>

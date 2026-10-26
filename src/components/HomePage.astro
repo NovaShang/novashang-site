@@ -36,7 +36,7 @@ const featured = allProjects
         <a href={localizedPath('/posts', lang)} class="text-white/80 hover:text-white transition-colors">{t('nav.posts')}</a>
         <a href={localizedPath('/projects', lang)} class="text-white/80 hover:text-white transition-colors">{t('nav.projects')}</a>
         <span class="w-px h-3.5 bg-white/20"></span>
-        <a href={lang === 'zh' ? '/en/' : '/zh/'} class="text-white/50 hover:text-white transition-colors">{lang === 'zh' ? 'EN' : '中文'}</a>
+        <a href={lang === 'zh' ? '/en/' : '/zh/'} data-lang-switch={lang === 'zh' ? 'en' : 'zh'} class="text-white/50 hover:text-white transition-colors">{lang === 'zh' ? 'EN' : '中文'}</a>
       </nav>
     </div>
     <a href="#content" class="scroll-cue absolute left-1/2 -translate-x-1/2 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] p-3" aria-label={t('home.section.posts')}>

@@ -41,6 +41,7 @@ const switchUrl = switchLangPath(path, lang, targetLang);
       <span class="w-px h-4 bg-line mx-1 md:mx-2"></span>
       <a
         href={switchUrl}
+        data-lang-switch={targetLang}
         class="px-1.5 md:px-2 py-1.5 text-muted hover:text-fg transition-colors"
         aria-label={targetLang === 'en' ? 'Switch to English' : '切换到中文'}
       >
