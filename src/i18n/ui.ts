@@ -25,8 +25,8 @@ export const ui = {
     'auth.signing_in': '登录中…',
 
     'home.hero.name': '高尚',
-    'home.hero.role': 'Foundational Industries 仿真与数字孪生工程师，在 Palo Alto。',
-    'home.hero.bio': '此前在上海建工做了九年 BIM 和数字孪生。业余时间做 AI 工具，让它读懂、绘制、修改建筑模型和工程图纸；也做一些自己每天要用的小工具。',
+    'home.hero.role': '把现实世界变成 AI 读得懂的东西。',
+    'home.hero.bio': '我做的东西大多是同一件事：给真实存在的东西做一个足够准确的数字副本，让软件和 AI 能在上面读、算、改。有时是一栋楼的模型和图纸，有时是一张电气单线图，有时是一台几十年前的老电脑。现在最感兴趣的，是让 AI 不只会聊天，还能看懂这些副本，对现实世界做出靠谱的判断。',
 
     'home.hero.alt': 'Shang Gao',
     'home.section.about': '关于',
@@ -63,8 +63,8 @@ export const ui = {
     'auth.signing_in': 'Signing in…',
 
     'home.hero.name': 'Shang Gao',
-    'home.hero.role': 'Emulation & Digital Twin Engineer at Foundational Industries, Palo Alto.',
-    'home.hero.bio': 'Before this I spent nine years on BIM and digital twins at Shanghai Construction Group. In my own time I build AI tools that read, draw and edit building models and engineering diagrams, and the occasional small utility for my own desk.',
+    'home.hero.role': 'Making the physical world legible to AI.',
+    'home.hero.bio': "Most of what I build is the same thing: a faithful digital copy of something real, so software and AI can read it, run it and change it. Sometimes it's a building's model and drawings, sometimes an electrical single-line diagram, sometimes a computer from decades ago. What interests me most now is AI that doesn't just talk, but understands these copies and makes sound calls about the physical world.",
 
     'home.hero.alt': '高尚',
     'home.section.about': 'About',
