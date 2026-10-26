@@ -22,6 +22,9 @@ const projects = defineCollection({
     description: z.string(),
     url: z.string().url(),
     repo: z.string().url().optional(),
+    /** Square icon or logo, e.g. /media/projects/x/icon.png */
+    icon: z.string().optional(),
+    /** Screenshot or product image, about 16:10 */
     cover: z.string().optional(),
     tags: z.array(z.string()).default([]),
     lang: z.enum(['zh', 'en']),

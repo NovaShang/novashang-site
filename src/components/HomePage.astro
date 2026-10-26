@@ -1,8 +1,8 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PostRow from './PostRow.astro';
-import ProjectRow from './ProjectRow.astro';
+import PostCard from './PostCard.astro';
+import ProjectCard from './ProjectCard.astro';
 import Section from './Section.astro';
 import { localizedPath, useTranslations, type Lang } from '../i18n/utils';
 
@@ -23,36 +23,68 @@ const featured = allProjects
 
 ---
 <BaseLayout shot="home">
-  {/* The first screen is the scene itself: the galaxy, the tile at its core,
-      and a small caption like the label beside a work on a gallery wall. */}
-  <section class="relative h-[100svh] min-h-[560px]">
-    <div class="absolute inset-x-0 bottom-0">
-      <div class="caption max-w-[1120px] mx-auto px-5 md:px-8 pb-9 md:pb-12">
-        <h1 class="text-[22px] md:text-[24px] font-semibold tracking-tight text-white">
-          {t('home.hero.name')}<span class="ml-3 font-normal text-white/45">{t('home.hero.alt')}</span>
-        </h1>
-        <p class="mt-1.5 text-[14px] md:text-[15px] text-white/65">{t('home.hero.role')}</p>
-      </div>
+  {/* The first screen is the scene itself: the galaxy with the tile at its
+      core (drawn by the background), and below it the name, the line and the
+      way in. The top bar stays empty until you scroll. */}
+  <section class="hero relative h-[100svh] min-h-[560px]">
+    <div class="hero-text absolute inset-x-0 text-center px-6">
+      <h1 class="text-[24px] md:text-[28px] font-semibold tracking-tight text-white">
+        {t('home.hero.name')}<span class="ml-3 font-normal text-white/50">{t('home.hero.alt')}</span>
+      </h1>
+      <p class="mt-2 text-[14px] md:text-[16px] text-white/70">{t('home.hero.role')}</p>
+      <nav class="mt-7 md:mt-8 flex items-center justify-center gap-7 text-[14px] md:text-[15px]" aria-label={t('nav.home')}>
+        <a href={localizedPath('/posts', lang)} class="text-white/80 hover:text-white transition-colors">{t('nav.posts')}</a>
+        <a href={localizedPath('/projects', lang)} class="text-white/80 hover:text-white transition-colors">{t('nav.projects')}</a>
+        <span class="w-px h-3.5 bg-white/20"></span>
+        <a href={lang === 'zh' ? '/en/' : '/zh/'} class="text-white/50 hover:text-white transition-colors">{lang === 'zh' ? 'EN' : '中文'}</a>
+      </nav>
     </div>
+    <a href="#content" class="scroll-cue absolute left-1/2 -translate-x-1/2 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] p-3" aria-label={t('home.section.posts')}>
+      <span class="block w-px h-10 bg-white/15 relative overflow-hidden"><span class="scroll-dot"></span></span>
+    </a>
   </section>
 
-  <div class="pt-24 md:pt-32 space-y-24 md:space-y-32">
+  <div id="content" class="pt-20 md:pt-28 space-y-24 md:space-y-32 scroll-mt-16">
     {posts.length > 0 && (
       <Section label={t('home.section.posts')} more={{ href: localizedPath('/posts', lang), text: t('home.posts.all') }}>
-        <div class="divide-y divide-line border-b border-line">
-          {posts.map((post) => <PostRow post={post} lang={lang} />)}
+        <div class="grid gap-4">
+          {posts.map((post) => <PostCard post={post} lang={lang} />)}
         </div>
       </Section>
     )}
 
     <Section label={t('home.section.projects')} more={{ href: localizedPath('/projects', lang), text: t('home.projects.all').replace('{n}', String(allProjects.length)) }}>
-      <div class="divide-y divide-line border-b border-line">
-        {featured.map((project) => <ProjectRow project={project} />)}
+      <div class="grid gap-4 sm:grid-cols-2">
+        {featured.map((project) => <ProjectCard project={project} showCover />)}
       </div>
     </Section>
   </div>
 </BaseLayout>
 
 <style>
-  .caption { text-shadow: 0 1px 14px rgba(7, 13, 18, 0.7); }
+  /* The tile sits a touch above the middle of the screen (see director.ts);
+     the text starts just under it. */
+  .hero-text { top: calc(48% + 78px); text-shadow: 0 1px 16px rgba(7, 13, 18, 0.75); }
+  @media (min-width: 768px) { .hero-text { top: calc(48% + 92px); } }
+
+  /* A slow point of light running down a hairline: there is more below. */
+  .scroll-dot {
+    position: absolute;
+    left: -1px;
+    top: -12px;
+    width: 3px;
+    height: 12px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.85));
+    animation: scroll-dot 2.6s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  }
+  @keyframes scroll-dot {
+    0% { transform: translateY(0); opacity: 0; }
+    15% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { transform: translateY(52px); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-dot { animation: none; top: 14px; opacity: 0.6; }
+  }
 </style>

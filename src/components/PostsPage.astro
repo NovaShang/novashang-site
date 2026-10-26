@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PostRow from './PostRow.astro';
+import PostCard from './PostCard.astro';
 import Section from './Section.astro';
 import { useTranslations, type Lang } from '../i18n/utils';
 
@@ -20,8 +20,8 @@ const posts = (await getCollection('posts', ({ data }) => data.lang === lang && 
       {posts.length === 0 ? (
         <p class="pt-6 text-muted">{t('posts.empty')}</p>
       ) : (
-        <div class="divide-y divide-line border-b border-line">
-          {posts.map((post) => <PostRow post={post} lang={lang} />)}
+        <div class="grid gap-4">
+          {posts.map((post) => <PostCard post={post} lang={lang} />)}
         </div>
       )}
     </Section>

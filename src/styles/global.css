@@ -104,3 +104,22 @@ html[lang='zh-CN'] body { letter-spacing: 0.01em; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
 }
+
+/* Content sits on translucent cards so it reads clearly over the galaxy. */
+.card {
+  background: rgba(10, 18, 27, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+a.card:hover {
+  background: rgba(14, 24, 36, 0.78);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+/* A little blur where the GPU can spare it; phones keep the plain tint. */
+@media (min-width: 768px) and (pointer: fine) {
+  .card {
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    backdrop-filter: blur(10px) saturate(120%);
+  }
+}

@@ -54,6 +54,8 @@ const switchUrl = switchLangPath(path, lang, targetLang);
 
 <style is:global>
   body[data-shot='home'] [data-nav] { --nav-solid: 0; }
+  /* on the landing page the hero has the links; the bar's own fade in as it fills */
+  body[data-shot='home'] [data-nav] nav { opacity: var(--nav-solid); }
   /* the landing page's first screen runs under the bar */
   body[data-shot='home'] .nav-spacer { display: none; }
 </style>

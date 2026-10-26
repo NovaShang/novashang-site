@@ -10,7 +10,7 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative, extname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import OSS from 'ali-oss';
-import { MEDIA_PREFIX, R2_ORIGIN, OSS_ORIGIN } from '../src/lib/media.mjs';
+import { MEDIA_PREFIX, R2_ORIGIN } from '../src/lib/media.mjs';
 
 const R2_BUCKET = 'nova-public';
 const TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp',
@@ -28,7 +28,17 @@ const oss = new OSS({
   bucket: process.env.OSS_BUCKET,
   region: process.env.OSS_REGION,
   secure: true,
+  timeout: 600_000,   // uploads to mainland China can be slow from abroad
 });
+
+const ossSize = async (key) => {
+  try {
+    return Number((await oss.head(key)).res.headers['content-length']);
+  } catch (e) {
+    if (e.status === 404) return -1;
+    throw e;
+  }
+};
 
 async function* files(dir) {
   for (const e of await readdir(dir, { withFileTypes: true })) {
@@ -39,8 +49,12 @@ async function* files(dir) {
 }
 
 const sameSize = async (url, size) => {
-  const res = await fetch(url, { method: 'HEAD' });
-  return res.ok && Number(res.headers.get('content-length')) === size;
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    return res.ok && Number(res.headers.get('content-length')) === size;
+  } catch {
+    return false;   // not reachable yet (DNS, certificate): upload to be safe
+  }
 };
 
 for await (const f of files('media')) {
@@ -53,9 +67,11 @@ for await (const f of files('media')) {
     execFileSync('npx', ['wrangler', 'r2', 'object', 'put', `${R2_BUCKET}/${key}`, '--file', f, '--content-type', type, '--remote'], { stdio: 'inherit' });
   }
 
-  if (await sameSize(OSS_ORIGIN + key, size)) console.log(`OSS  skip ${key}`);
+  if (await ossSize(key) === size) console.log(`OSS  skip ${key}`);
   else {
-    await oss.put(key, await readFile(f), { headers: { 'Content-Type': type, 'Cache-Control': 'public, max-age=31536000' } });
+    const headers = { 'Content-Type': type, 'Cache-Control': 'public, max-age=31536000' };
+    if (size > 5 * 1024 * 1024) await oss.multipartUpload(key, f, { headers, partSize: 1024 * 1024, parallel: 4 });
+    else await oss.put(key, await readFile(f), { headers });
     console.log(`OSS  put  ${key}`);
   }
 }

@@ -1,0 +1,36 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { displayUrl } from '../i18n/utils';
+import { media } from '../lib/variant';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  /** Show the screenshot on top (featured lists); the full list stays compact. */
+  showCover?: boolean;
+}
+const { project, showCover = false } = Astro.props;
+const { title, description, url } = project.data;
+const icon = media(project.data.icon);
+const cover = showCover ? media(project.data.cover) : undefined;
+---
+<a href={url} target="_blank" rel="noopener noreferrer" class="card group flex flex-col overflow-hidden">
+  {cover && (
+    <div class="aspect-[16/10] overflow-hidden bg-black/30 border-b border-white/[0.06]">
+      <img src={cover} alt="" loading="lazy" decoding="async" class="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.02]" />
+    </div>
+  )}
+  <div class="p-5 flex gap-4 min-w-0">
+    <div class="shrink-0 w-11 h-11 rounded-[10px] overflow-hidden bg-white/[0.06] flex items-center justify-center">
+      {icon
+        ? <img src={icon} alt="" loading="lazy" decoding="async" class="w-full h-full object-cover" />
+        : <span class="text-[17px] font-semibold text-fg-2">{title.slice(0, 1)}</span>}
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-baseline justify-between gap-3">
+        <h3 class="text-[16px] font-medium text-fg group-hover:text-white transition-colors truncate">{title}</h3>
+        <span class="hidden sm:block shrink-0 text-[12px] text-muted group-hover:text-fg-2 transition-colors truncate max-w-[50%]">{displayUrl(url)} ↗</span>
+      </div>
+      <p class="mt-1.5 text-[14px] leading-relaxed text-fg-2/85 line-clamp-3">{description}</p>
+    </div>
+  </div>
+</a>

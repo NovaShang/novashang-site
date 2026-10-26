@@ -96,7 +96,15 @@ function apply(pose: Pose, docked: number, inScene: boolean) {
   brandTarget.docked = !inScene;
   brand.classList.add('is-placed');
   // the bar and the nav title fill in as the tile docks
-  document.querySelector<HTMLElement>('[data-nav]')?.style.setProperty('--nav-solid', String(onLanding() ? docked : 1));
+  const nav = document.querySelector<HTMLElement>('[data-nav]');
+  nav?.style.setProperty('--nav-solid', String(onLanding() ? docked : 1));
+  const links = nav?.querySelector<HTMLElement>('nav');
+  if (links) links.style.pointerEvents = !onLanding() || docked > 0.5 ? '' : 'none';
+  // and the hero's centered links give way as the bar takes over
+  const hero = document.querySelector<HTMLElement>('.hero-text');
+  if (hero) hero.style.opacity = String(1 - smooth(Math.min(1, docked * 1.6)));
+  const cue = document.querySelector<HTMLElement>('.scroll-cue');
+  if (cue) cue.style.opacity = String(1 - Math.min(1, docked * 2));
   const title = document.querySelector<HTMLElement>('[data-nav-title]');
   if (title) title.style.opacity = String(smooth(Math.min(1, Math.max(0, (docked - 0.55) / 0.45))));
 }

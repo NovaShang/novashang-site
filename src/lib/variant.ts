@@ -9,3 +9,7 @@ export const isCn = variant === 'cn';
 
 /** ICP licence number for the cn build, e.g. "沪ICP备12345678号". */
 export const icp = (import.meta.env.PUBLIC_ICP as string | undefined) ?? '';
+
+import { mediaUrl } from './media.mjs';
+/** Resolve a /media/... path for this build (R2 for global, OSS for cn). */
+export const media = (path?: string) => (path ? mediaUrl(path, isCn) : undefined);
