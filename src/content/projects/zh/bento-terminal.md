@@ -8,4 +8,6 @@ lang: zh
 group: tools
 featured: true
 order: 4
+icon: "/media/projects/bento-terminal/icon.png"
+cover: "/media/projects/bento-terminal/cover.jpg"
 ---

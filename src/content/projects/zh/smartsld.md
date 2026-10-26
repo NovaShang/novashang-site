@@ -8,4 +8,6 @@ lang: zh
 group: building
 featured: true
 order: 2
+icon: "/media/projects/smartsld/icon.png"
+cover: "/media/projects/smartsld/cover.png"
 ---

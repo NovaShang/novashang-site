@@ -8,4 +8,6 @@ lang: zh
 group: tools
 featured: false
 order: 10
+icon: "/media/projects/coding-keyboard/icon.png"
+cover: "/media/projects/coding-keyboard/cover.png"
 ---

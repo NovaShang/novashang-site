@@ -8,4 +8,5 @@ lang: en
 group: building
 featured: false
 order: 13
+icon: "/media/projects/svf-viewer/icon.png"
 ---

@@ -8,4 +8,6 @@ lang: en
 group: tools
 featured: false
 order: 7
+icon: "/media/projects/dropitdown/icon.png"
+cover: "/media/projects/dropitdown/cover.png"
 ---

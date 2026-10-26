@@ -8,4 +8,6 @@ lang: zh
 group: fun
 featured: false
 order: 12
+icon: "/media/projects/powermode-windows/icon.png"
+cover: "/media/projects/powermode-windows/cover.png"
 ---

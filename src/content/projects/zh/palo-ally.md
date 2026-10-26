@@ -8,4 +8,6 @@ lang: zh
 group: tools
 featured: true
 order: 3
+icon: "/media/projects/palo-ally/icon.png"
+cover: "/media/projects/palo-ally/cover.png"
 ---

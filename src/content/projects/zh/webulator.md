@@ -8,4 +8,5 @@ lang: zh
 group: fun
 featured: false
 order: 8
+cover: "/media/projects/webulator/cover.png"
 ---

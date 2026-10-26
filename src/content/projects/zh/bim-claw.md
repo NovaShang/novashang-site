@@ -7,4 +7,6 @@ lang: zh
 group: building
 featured: true
 order: 1
+icon: "/media/projects/bim-claw/icon.png"
+cover: "/media/projects/bim-claw/cover.png"
 ---

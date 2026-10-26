@@ -7,4 +7,5 @@ lang: zh
 group: fun
 featured: false
 order: 11
+cover: "/media/projects/warloom/cover.png"
 ---
