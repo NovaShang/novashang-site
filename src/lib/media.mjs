@@ -4,8 +4,8 @@
 //   global build: /media/x  ->  R2   https://storage.novashang.com/nova-site-static/x
 //   cn build:     /media/x  ->  OSS  https://static.gaoshang.me/nova-site-static/x
 //
-// R2 is the source of truth (npm run media:push uploads there); CI copies
-// whatever OSS is missing before the cn deploy (scripts/sync-media-oss.mjs).
+// npm run media:push uploads to both; CI checks each store has every file
+// before deploying the matching site (scripts/check-media.mjs).
 
 export const MEDIA_PREFIX = 'nova-site-static/';
 export const R2_ORIGIN = 'https://storage.novashang.com/';

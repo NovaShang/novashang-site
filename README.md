@@ -29,7 +29,7 @@ Fonts are self-hosted in both (`@fontsource-variable/inter`).
 
 Write images and downloads as `/media/...` in Markdown. The build rewrites them to R2 (global) or OSS (cn), see `src/lib/media.mjs`.
 
-To add files: put them under the git-ignored `media/` folder with the same layout as the paths, then `npm run media:push` to upload to R2 (the source of truth). CI refuses to deploy if a referenced file isn't in R2 (`npm run media:check`), and copies anything OSS is missing before each cn deploy (`npm run media:sync-oss`).
+To add files: put them under the git-ignored `media/` folder with the same layout as the paths, then `npm run media:push`. It uploads to both R2 (through your wrangler login) and OSS (keys in a git-ignored `.env`: `OSS_ACCESS_KEY_ID`, `OSS_ACCESS_KEY_SECRET`, `OSS_BUCKET`, `OSS_REGION`), skipping files already there. CI won't deploy a site if a referenced file is missing from its store (`npm run media:check`, `media:check:cn`).
 
 ## Deploy
 

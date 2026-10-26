@@ -1,17 +1,15 @@
 # One push to master publishes both sites from the same commit:
 #   global  novashang.com  ->  Cloudflare Pages (project novashang-site)
 #   cn      gaoshang.me    ->  Aliyun ESA Pages (no sign-in, ICP in the footer)
-# Post media: global reads it from R2, cn from OSS; CI copies new files R2 -> OSS.
+# Post media: global reads it from R2, cn from OSS. Uploading is local
+# (npm run media:push, to both); each job only checks its store has every file.
 #
 # Repository secrets:
 #   CLOUDFLARE_API_TOKEN    token with "Cloudflare Pages: Edit"
 #   CLOUDFLARE_ACCOUNT_ID
 #   ESA_ACCESS_KEY_ID       RAM user with AliyunESAFullAccess
 #   ESA_ACCESS_KEY_SECRET
-#   OSS_ACCESS_KEY_ID       RAM user with write access to the media bucket
-#   OSS_ACCESS_KEY_SECRET
 # Repository variables:
-#   OSS_BUCKET, OSS_REGION  e.g. gaoshang-static, oss-cn-hangzhou
 #   PUBLIC_ICP              ICP licence number shown on the cn site
 #   ESA_PROJECT             ESA Pages project name
 
@@ -54,13 +52,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - name: Copy new post media from R2 to OSS
-        env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_BUCKET: ${{ vars.OSS_BUCKET }}
-          OSS_REGION: ${{ vars.OSS_REGION }}
-        run: npm run media:sync-oss
+      - name: Check every post image is in OSS
+        run: npm run media:check:cn
       - name: Build (cn)
         env:
           PUBLIC_ICP: ${{ vars.PUBLIC_ICP }}
