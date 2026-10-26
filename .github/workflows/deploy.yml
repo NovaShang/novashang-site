@@ -44,6 +44,8 @@ jobs:
           --commit-hash "$GITHUB_SHA" --commit-message "$(git log -1 --format=%s)"
 
   cn:
+    # skipped until the Aliyun side is configured
+    if: ${{ vars.ESA_PROJECT != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
