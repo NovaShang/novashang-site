@@ -31,6 +31,8 @@
 }
 
 html {
+  /* a safety net: nothing may make the whole page scroll sideways (clip keeps sticky working) */
+  overflow-x: clip;
   background-color: var(--c-bg);
   color: var(--c-fg);
   -webkit-font-smoothing: antialiased;
@@ -99,7 +101,22 @@ html[lang='zh-CN'] body { letter-spacing: 0.01em; }
 .prose-nova blockquote { font-style: normal; font-weight: 400; }
 .prose-nova blockquote p::before, .prose-nova blockquote p::after { content: none; }
 .prose-nova img { border-radius: 8px; }
-.prose-nova table { font-size: 15px; }
+.prose-nova table { font-size: 15px; margin: 0; }
+/* wide tables scroll sideways on their own; the page never does */
+.prose-nova .table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1.6em 0;
+  max-width: 100%;
+}
+.prose-nova .table-scroll table { min-width: 100%; width: auto; }
+/* keep columns readable on a phone; the scroller takes up the extra width */
+.prose-nova .table-scroll th, .prose-nova .table-scroll td { min-width: 7em; }
+.prose-nova pre { max-width: 100%; overflow-x: auto; }
+/* long inline code and URLs wrap instead of widening the page */
+.prose-nova { overflow-wrap: anywhere; }
+.prose-nova :not(pre) > code { overflow-wrap: anywhere; word-break: break-word; }
+.prose-nova img { max-width: 100%; height: auto; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }

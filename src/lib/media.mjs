@@ -50,3 +50,17 @@ export function rehypeMedia({ cn }) {
     walk(tree);
   };
 }
+
+/** Rehype plugin: wraps each table so a wide one scrolls on its own instead of the page. */
+export function rehypeTableScroll() {
+  return (tree) => {
+    const walk = (node) => {
+      node.children?.forEach((child, i) => {
+        if (child.type === 'element' && child.tagName === 'table') {
+          node.children[i] = { type: 'element', tagName: 'div', properties: { className: ['table-scroll'] }, children: [child] };
+        } else walk(child);
+      });
+    };
+    walk(tree);
+  };
+}

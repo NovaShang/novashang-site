@@ -3,7 +3,7 @@ import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
-import { rehypeMedia } from './src/lib/media.mjs';
+import { rehypeMedia, rehypeTableScroll } from './src/lib/media.mjs';
 
 const cn = process.env.PUBLIC_VARIANT === 'cn';
 
@@ -21,7 +21,7 @@ export default defineConfig({
   },
   markdown: {
     shikiConfig: { theme: 'github-dark' },
-    rehypePlugins: [[rehypeMedia, { cn }]],
+    rehypePlugins: [[rehypeMedia, { cn }], rehypeTableScroll],
   },
   integrations: [
     mdx(),
