@@ -25,11 +25,9 @@ export const ui = {
     'auth.signing_in': '登录中…',
 
     'home.hero.name': '高尚',
-    'home.hero.role': '把现实世界变成 AI 读得懂的东西。',
-    'home.hero.bio': '我做的东西大多是同一件事：给真实存在的东西做一个足够准确的数字副本，让软件和 AI 能在上面读、算、改。有时是一栋楼的模型和图纸，有时是一张电气单线图，有时是一台几十年前的老电脑。现在最感兴趣的，是让 AI 不只会聊天，还能看懂这些副本，对现实世界做出靠谱的判断。',
+    'home.hero.role': '为 AI 搭一座通往现实世界的桥。',
 
     'home.hero.alt': 'Shang Gao',
-    'home.section.about': '关于',
     'home.section.posts': '文章',
     'home.section.projects': '项目',
     'home.posts.all': '全部文章',
@@ -63,11 +61,9 @@ export const ui = {
     'auth.signing_in': 'Signing in…',
 
     'home.hero.name': 'Shang Gao',
-    'home.hero.role': 'Making the physical world legible to AI.',
-    'home.hero.bio': "Most of what I build is the same thing: a faithful digital copy of something real, so software and AI can read it, run it and change it. Sometimes it's a building's model and drawings, sometimes an electrical single-line diagram, sometimes a computer from decades ago. What interests me most now is AI that doesn't just talk, but understands these copies and makes sound calls about the physical world.",
+    'home.hero.role': 'Building the bridge between AI and the physical world.',
 
     'home.hero.alt': '高尚',
-    'home.section.about': 'About',
     'home.section.posts': 'Writing',
     'home.section.projects': 'Projects',
     'home.posts.all': 'All writing',

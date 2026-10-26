@@ -4,7 +4,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PostRow from './PostRow.astro';
 import ProjectRow from './ProjectRow.astro';
 import Section from './Section.astro';
-import { contact } from '../i18n/ui';
 import { localizedPath, useTranslations, type Lang } from '../i18n/utils';
 
 interface Props {
@@ -22,11 +21,6 @@ const featured = allProjects
   .filter((p) => p.data.featured)
   .sort((a, b) => a.data.order - b.data.order);
 
-const links = [
-  { href: contact.github, label: 'GitHub' },
-  { href: contact.linkedin, label: 'LinkedIn' },
-  { href: `mailto:${contact.email}`, label: contact.email },
-];
 ---
 <BaseLayout shot="home">
   {/* The first screen is the scene itself: the galaxy, the tile at its core,
@@ -43,16 +37,6 @@ const links = [
   </section>
 
   <div class="pt-24 md:pt-32 space-y-24 md:space-y-32">
-    <Section label={t('home.section.about')}>
-      <p class="md:pt-5 text-[19px] md:text-[23px] leading-[1.65] text-fg-2 max-w-[720px]">{t('home.hero.bio')}</p>
-      <div class="mt-7 flex flex-wrap gap-x-7 gap-y-2 text-[14px] text-muted">
-        {links.map((l) => (
-          <a href={l.href} target={l.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"
-             class="hover:text-fg transition-colors">{l.label}</a>
-        ))}
-      </div>
-    </Section>
-
     {posts.length > 0 && (
       <Section label={t('home.section.posts')} more={{ href: localizedPath('/posts', lang), text: t('home.posts.all') }}>
         <div class="divide-y divide-line border-b border-line">
