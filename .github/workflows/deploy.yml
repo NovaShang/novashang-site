@@ -65,7 +65,9 @@ jobs:
         env:
           ESA_ACCESS_KEY_ID: ${{ secrets.ESA_ACCESS_KEY_ID }}
           ESA_ACCESS_KEY_SECRET: ${{ secrets.ESA_ACCESS_KEY_SECRET }}
-        run: |
-          npm i -g esa-cli@latest
-          esa-cli login
-          esa-cli deploy --name "${{ vars.ESA_PROJECT }}" --assets ./dist-cn
+        # esa-cli reads ESA_ACCESS_KEY_ID / ESA_ACCESS_KEY_SECRET from the environment
+        run: >
+          npx --yes esa-cli@1.0.13 deploy --skip-update-check
+          --name "${{ vars.ESA_PROJECT }}" --assets ./dist-cn
+          --environment production --no-preview
+          --description "$GITHUB_SHA" 
