@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "build:cn": "PUBLIC_VARIANT=cn astro build && node scripts/fetch-media.mjs dist-cn",
+    "build:cn": "PUBLIC_VARIANT=cn astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "media:push": "node scripts/push-media.mjs"
+    "media:push": "node scripts/push-media.mjs",
+    "media:sync-oss": "node scripts/sync-media-oss.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.0.0",
@@ -19,5 +20,8 @@
     "@tailwindcss/vite": "^4.1.18",
     "astro": "^5.16.6",
     "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "ali-oss": "^6.23.0"
   }
 }

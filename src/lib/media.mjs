@@ -1,15 +1,37 @@
-// Post images and downloads are written as /media/... in Markdown. The files
-// themselves live in the R2 bucket nova-public under nova-site-static/.
+// Post images and downloads are written as /media/... in Markdown. Each site
+// serves them from object storage close to its readers:
 //
-//   global build: /media/x  ->  https://storage.novashang.com/nova-site-static/x
-//   cn build:     /media/x  stays as is; CI copies the files into dist-cn/media
-//                 (scripts/fetch-media.mjs) so they're served from inside China
+//   global build: /media/x  ->  R2   https://storage.novashang.com/nova-site-static/x
+//   cn build:     /media/x  ->  OSS  https://static.gaoshang.me/nova-site-static/x
+//
+// R2 is the source of truth (npm run media:push uploads there); CI copies
+// whatever OSS is missing before the cn deploy (scripts/sync-media-oss.mjs).
 
-export const MEDIA_ORIGIN = 'https://storage.novashang.com/nova-site-static/';
+export const MEDIA_PREFIX = 'nova-site-static/';
+export const R2_ORIGIN = 'https://storage.novashang.com/';
+export const OSS_ORIGIN = process.env.PUBLIC_MEDIA_CN_ORIGIN ?? 'https://static.gaoshang.me/';
+
+/** Every /media/... path the content refers to. */
+export async function mediaRefs(dir = 'src/content') {
+  const { readdir, readFile } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const refs = new Set();
+  const walk = async (d) => {
+    for (const e of await readdir(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) await walk(p);
+      else if (/\.(md|mdx)$/.test(e.name)) {
+        for (const m of (await readFile(p, 'utf8')).matchAll(/\/media\/[^\s)"'<>]+/g)) refs.add(m[0]);
+      }
+    }
+  };
+  await walk(dir);
+  return [...refs].sort();
+}
 
 export function mediaUrl(path, cn) {
   if (!path || !path.startsWith('/media/')) return path;
-  return cn ? path : MEDIA_ORIGIN + path.slice('/media/'.length);
+  return (cn ? OSS_ORIGIN : R2_ORIGIN) + MEDIA_PREFIX + path.slice('/media/'.length);
 }
 
 /** Rehype plugin: rewrites img src and link href that point at /media/. */
