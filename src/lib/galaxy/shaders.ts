@@ -365,13 +365,43 @@ uniform sampler2D uVol;    // the galaxy's glow, as already drawn on screen
 uniform vec2 uView;
 uniform float uShade;      // a touch darker as it turns away from the camera
 uniform float uAlpha;
+uniform float uScale;      // quad size relative to the tile (1 for the tile, >1 for its glow)
+uniform int uMode;         // 0: the tile, 1: the light it casts around itself
+
+const vec3 MAGENTA = vec3(0.906, 0.302, 0.682);
+const float RADIUS = 14.0 / 104.0;   // corner radius, as in the nav tab
+
+// signed distance to the rounded tile, in tile units (0..1 across)
+float tileSdf(vec2 t) {
+  vec2 q = abs(t - 0.5) - (0.5 - RADIUS);
+  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - RADIUS;
+}
+
 void main() {
-  vec4 c = texture(uTex, vUv);
-  if (c.a < 0.5) discard;    // the rounded corners mustn't hide the stars behind
-  // the tile sits inside the bulge's light: a little of that glow lies over it
+  vec2 t = (vUv - 0.5) * uScale + 0.5;
+  float d = tileSdf(t);
   vec3 glow = texture(uVol, gl_FragCoord.xy / uView).rgb;
-  vec3 rgb = c.rgb * uShade * 0.93 + glow * 0.16 * c.a;
-  outColor = vec4(rgb, c.a) * uAlpha;
+
+  if (uMode == 1) {
+    // soft magenta light spilling onto the dust and stars around the tile
+    if (d < 0.0) discard;
+    float g = exp(-d * 6.0) * 0.11 + exp(-d * 24.0) * 0.08;
+    outColor = vec4(MAGENTA * g * uAlpha, 0.0);
+    return;
+  }
+
+  // a soft, anti-aliased edge rather than a hard cut-out
+  float soft = max(fwidth(d) * 1.1, 0.003);
+  float a = 1.0 - smoothstep(-soft, soft, d);
+  if (a < 0.02) discard;    // the rounded corners mustn't hide the stars behind
+
+  vec4 c = texture(uTex, vUv);
+  vec3 rgb = c.a > 0.001 ? c.rgb / c.a : MAGENTA;
+  rgb *= uShade * 0.95;
+  // the bulge's light lies over it, strongest at the rim where it wraps round
+  float rim = 1.0 - smoothstep(0.0, 0.06, -d);
+  rgb += glow * (0.10 + 0.14 * rim);
+  outColor = vec4(rgb, 1.0) * a * uAlpha;
 }`;
 
 export const accumFrag = /* glsl */ `#version 300 es

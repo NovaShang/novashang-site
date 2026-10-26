@@ -438,8 +438,9 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     if (tileAlpha < 0.01) return;
 
     const uv = [[0, 1], [1, 1], [0, 0], [1, 0]];
+    const quad = (k: number) => new Float32Array([[-1, -1], [1, -1], [-1, 1], [1, 1]].flatMap(([a, b], i) =>
+      [...add(add(TILE_POS, tileR!, a * h * k), tileU!, b * h * k), ...uv[i]]));
     g.bindBuffer(g.ARRAY_BUFFER, tileBuf);
-    g.bufferSubData(g.ARRAY_BUFFER, 0, new Float32Array(corners.flatMap((p, i) => [...p, ...uv[i]])));
     g.blendFunc(g.ONE, g.ONE_MINUS_SRC_ALPHA);
     g.useProgram(tileProg.prog);
     g.activeTexture(g.TEXTURE0);
@@ -462,6 +463,20 @@ export function mountGalaxy(canvas: HTMLCanvasElement, opts: GalaxyOptions = {})
     g.uniform1f(tileProg.u.uShade, 0.8 + 0.2 * facing);
     g.uniform1f(tileProg.u.uAlpha, tileAlpha);
     g.bindVertexArray(tileVao);
+
+    // first the light it casts (no depth, so stars behind still show through)
+    const GLOW = 2.8;
+    g.depthMask(false);
+    g.bufferSubData(g.ARRAY_BUFFER, 0, quad(GLOW));
+    g.uniform1f(tileProg.u.uScale, GLOW);
+    g.uniform1i(tileProg.u.uMode, 1);
+    g.drawArrays(g.TRIANGLE_STRIP, 0, 4);
+
+    // then the tile itself, which hides the stars behind it
+    g.depthMask(true);
+    g.bufferSubData(g.ARRAY_BUFFER, 0, quad(1));
+    g.uniform1f(tileProg.u.uScale, 1);
+    g.uniform1i(tileProg.u.uMode, 0);
     g.drawArrays(g.TRIANGLE_STRIP, 0, 4);
   }
 
