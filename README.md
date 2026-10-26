@@ -18,7 +18,7 @@ npm run build:cn   # cn site     -> dist-cn/
 |                  | global (`build`)                | cn (`build:cn`, `PUBLIC_VARIANT=cn`)        |
 |------------------|---------------------------------|---------------------------------------------|
 | Domain           | novashang.com                   | gaoshang.me                                 |
-| Hosting          | Cloudflare Pages (`nova-site`)  | Aliyun ESA Pages                            |
+| Hosting          | Cloudflare Pages (`novashang-site`)  | Aliyun ESA Pages                            |
 | Post media       | R2, `storage.novashang.com`     | OSS, `static.gaoshang.me`                   |
 | Sign-in          | via auth.novashang.com          | none                                        |
 | Footer           |                                 | ICP licence from `PUBLIC_ICP`               |
