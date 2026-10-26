@@ -1,0 +1,12 @@
+// Deploy from this folder: npx wrangler deploy
+{
+  "name": "novashang-redirect",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "shanggao.me/*", "zone_name": "shanggao.me" },
+    { "pattern": "www.shanggao.me/*", "zone_name": "shanggao.me" },
+    { "pattern": "www.novashang.com/*", "zone_name": "novashang.com" }
+  ]
+}
