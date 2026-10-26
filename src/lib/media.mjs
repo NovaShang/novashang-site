@@ -11,7 +11,7 @@ export const MEDIA_PREFIX = 'nova-site-static/';
 export const R2_ORIGIN = 'https://storage.novashang.com/';
 export const OSS_ORIGIN = process.env.PUBLIC_MEDIA_CN_ORIGIN ?? 'https://static.gaoshang.me/';
 
-/** Every /media/... path the content refers to. */
+/** Every /media/... path the published content refers to (drafts are skipped). */
 export async function mediaRefs(dir = 'src/content') {
   const { readdir, readFile } = await import('node:fs/promises');
   const { join } = await import('node:path');
@@ -21,7 +21,9 @@ export async function mediaRefs(dir = 'src/content') {
       const p = join(d, e.name);
       if (e.isDirectory()) await walk(p);
       else if (/\.(md|mdx)$/.test(e.name)) {
-        for (const m of (await readFile(p, 'utf8')).matchAll(/\/media\/[^\s)"'<>]+/g)) refs.add(m[0]);
+        const text = await readFile(p, 'utf8');
+        if (/^draft:\s*true\s*$/m.test(text.split(/^---\s*$/m)[1] ?? '')) continue;   // unpublished
+        for (const m of text.matchAll(/\/media\/[^\s)"'<>]+/g)) refs.add(m[0]);
       }
     }
   };
