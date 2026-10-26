@@ -34,6 +34,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - name: Check every post image is in R2
+        run: npm run media:check
       - run: npm run build
       - name: Deploy to Cloudflare Pages
         env:

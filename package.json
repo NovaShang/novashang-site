@@ -10,7 +10,8 @@
     "preview": "astro preview",
     "astro": "astro",
     "media:push": "node scripts/push-media.mjs",
-    "media:sync-oss": "node scripts/sync-media-oss.mjs"
+    "media:sync-oss": "node scripts/sync-media-oss.mjs",
+    "media:check": "node scripts/check-media.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.0.0",
