@@ -1,5 +1,6 @@
 # build
 dist/
+dist-cn/
 .astro/
 
 # deps

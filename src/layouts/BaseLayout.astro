@@ -1,5 +1,6 @@
 ---
 import { ClientRouter } from 'astro:transitions';
+import '@fontsource-variable/inter';
 import '../styles/global.css';
 import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
@@ -45,9 +46,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://novashang.c
 
 
     <ClientRouter />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body class="min-h-screen flex flex-col font-sans" data-shot={shot}>
     <GalaxyBackground />

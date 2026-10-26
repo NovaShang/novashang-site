@@ -4,8 +4,11 @@ import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
+const cn = process.env.PUBLIC_VARIANT === 'cn';
+
 export default defineConfig({
-  site: 'https://novashang.com',
+  site: cn ? 'https://gaoshang.me' : 'https://novashang.com',
+  outDir: cn ? './dist-cn' : './dist',
   output: 'static',
   i18n: {
     locales: ['zh', 'en'],

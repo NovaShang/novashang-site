@@ -2,6 +2,7 @@
 import { getLangFromUrl, useTranslations } from '../i18n/utils';
 import { contact } from '../i18n/ui';
 import AuthMenu from './AuthMenu.astro';
+import { icp, isCn } from '../lib/variant';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
@@ -9,12 +10,17 @@ const year = new Date().getFullYear();
 ---
 <footer class="mt-32">
   <div class="max-w-[1120px] mx-auto px-5 md:px-8 py-10 flex flex-col md:flex-row md:items-center justify-between gap-4 text-[13px] text-muted">
-    <p>© {year} {t('home.hero.name')}</p>
+    <p>
+      © {year} {t('home.hero.name')}
+      {isCn && icp && (
+        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="ml-4 hover:text-fg transition-colors">{icp}</a>
+      )}
+    </p>
     <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
       <a href={`mailto:${contact.email}`} class="hover:text-fg transition-colors">{contact.email}</a>
       <a href={contact.github} target="_blank" rel="noopener noreferrer" class="hover:text-fg transition-colors">GitHub</a>
       <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" class="hover:text-fg transition-colors">LinkedIn</a>
-      <span class="md:hidden"><AuthMenu /></span>
+      {!isCn && <span class="md:hidden"><AuthMenu /></span>}
     </div>
   </div>
 </footer>

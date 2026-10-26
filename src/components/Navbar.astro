@@ -1,6 +1,7 @@
 ---
 import { getLangFromUrl, localizedPath, switchLangPath, useTranslations } from '../i18n/utils';
 import AuthMenu from './AuthMenu.astro';
+import { isCn } from '../lib/variant';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
@@ -45,7 +46,7 @@ const switchUrl = switchLangPath(path, lang, targetLang);
       >
         {lang === 'zh' ? 'EN' : '中文'}
       </a>
-      <span class="hidden md:inline-flex ml-1"><AuthMenu /></span>
+      {!isCn && <span class="hidden md:inline-flex ml-1"><AuthMenu /></span>}
     </nav>
   </div>
 </header>

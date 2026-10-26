@@ -2,7 +2,7 @@
 @plugin '@tailwindcss/typography';
 
 @theme inline {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
 
   /* Semantic tokens resolve through runtime CSS vars so they swap with theme */
   --color-bg: var(--c-bg);
