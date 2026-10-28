@@ -1,8 +1,8 @@
 # Cloudflare Pages redirects for novashang.com.
 
-# Unpublished for now (being redacted); send readers to the list.
-/:lang/posts/llm-bim-eval     /:lang/posts/   301
-/:lang/posts/llm-bim-eval/    /:lang/posts/   301
+# The first LLM BIM eval post was replaced by v2.
+/:lang/posts/llm-bim-eval     /:lang/posts/llm-bim-eval-v2/   301
+/:lang/posts/llm-bim-eval/    /:lang/posts/llm-bim-eval-v2/   301
 
 # The previous site (late 2025) used /articles, project pages and categories.
 /:lang/articles               /:lang/posts/          301
